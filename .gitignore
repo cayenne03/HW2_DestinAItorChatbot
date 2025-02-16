@@ -1,3 +1,7 @@
+# Specific files in the project structure
+models/*
+.rasa/*
+
 # Byte-compiled files
 __pycache__/
 *.py[cod]

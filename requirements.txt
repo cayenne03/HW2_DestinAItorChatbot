@@ -1,0 +1,7 @@
+rasa==3.6.21
+python-dotenv==1.0.1
+mysql-connector-python==9.2.0
+Flask==3.1.0
+openai==1.62.0
+geocoder==1.38.1
+cohere==5.13.12
