@@ -6,3 +6,19 @@ rules:
   steps:
   - intent: goodbye
   - action: utter_goodbye
+
+- rule: Show travel options
+  steps:
+  - intent: show_travel_options
+  - action: utter_welcome_menu
+
+- rule: Greet user
+  steps:
+  - intent: greet
+  - action: utter_welcome_menu
+
+- rule: Session start
+  steps:
+  - action: action_session_start
+  - action: utter_welcome_menu
+

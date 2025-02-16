@@ -29,3 +29,22 @@ nlu:
     - see you around
     - bye bye
     - see you later
+
+- intent: show_travel_options
+  examples: |
+    - what can you help me with
+    - show me travel options
+    - what travel services do you offer
+    - I need help with travel planning
+    - show me what you can do
+    - travel options
+    - what are my options for travel
+    - how can you assist me with travel
+    - what travel assistance do you provide
+    - show me the travel menu
+    - I want to plan a trip
+    - help me with travel
+    - what travel help can you give
+    - show travel choices
+    - what kind of travel support do you offer
+
