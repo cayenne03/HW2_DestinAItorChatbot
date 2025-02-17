@@ -7,7 +7,12 @@ intents:
 
 responses:
   utter_welcome_menu:
-  - text: "Hey there! 👋 I'm DestinAItor, your AI-powered travel companion! ✈️ 🌍\n\nI can assist you with:\n\n✨ 1) Planning your perfect trip to any city, area, or country\n✨ 2) Finding top restaurants, hotels, or attractions in a specific city\n✨ 3) Discovering amazing places near your current location\n\nJust pick any of the above to get started! 🚀"
+  - text: "Hey there! 👋 I'm DestinAItor, your AI-powered travel companion! ✈️ 🌍\n\nI can assist you with:\n\n
+  ✨ 1) Planning your perfect trip to any city or area\n
+  ✨ 2) Finding top restaurants, hotels, or attractions in a specific city\n
+  ✨ 3) Discovering amazing places near your current location\n\n
+
+Just pick any of the above to get started! 🚀"
 
   utter_goodbye:
   - text: "Bye"
