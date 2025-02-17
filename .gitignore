@@ -1,6 +1,7 @@
 # Specific files in the project structure
 models/*
 .rasa/*
+.gradio/*
 
 # Byte-compiled files
 __pycache__/
