@@ -3,24 +3,72 @@ version: "3.1"
 intents:
   - greet
   - goodbye
-  - show_travel_options
+  - show_my_options
+  - trip_planning
+  - city_explorer
+  - around_me
+  - nlu_fallback
+
+entities:
+  - option
 
 responses:
   utter_welcome_menu:
-  - text: "Hey there! 👋 I'm DestinAItor, your AI-powered travel companion! ✈️ 🌍\n\n
+  - text: "Hey there! 👋 I'm **DestinAItor**, your AI-powered travel companion! 🌍\n
 
-I can assist you with:\n\n
-✨ 1) Planning your perfect trip to any city or area\n
-✨ 2) Finding top restaurants, hotels, or attractions in a specific city\n
-✨ 3) Discovering amazing places near your current location, wherever you are!\n\n
+      I can assist you with the following options. Please type the **option number** or **name** you'd like:\n
 
-Just pick any of the above to get started! 🚀"
+      👉 **1. Complete Trip Planning** 🎯 🏨 ✈️\n
+          • Find and compare flights\n
+          • Discover hotels that match your style\n
+          • Get personalized day-by-day itineraries\n
+
+      👉 **2. City Explorer** 🏛️ 🏖️ 🍽️\n
+          • Local restaurant & cuisine recommendations\n
+          • Must-visit attractions (historical sites, monuments, tours)\n
+          • Outdoor & indoor activities\n
+
+      👉 **3. Around Me Now!** 📍🍹🍽️\n
+          • Discover hidden gems near your current location\n
+          • Immediate dining options and local activities\n\n
+
+      🚀 **Reply by writing like below**:\n
+       - I want to plan a trip to London next week\n
+       - Help me explore restaurants OR museums OR tours in Paris\n
+       - Show me hotels OR attractions OR restaurants nearby\n
+
+      So how can I help you today? 😊"
+    buttons:
+      - title: "Trip Planning"
+        payload: "/trip_planning"
+      - title: "City Explorer"
+        payload: "/city_explorer"
+      - title: "Around Me Now"
+        payload: "/around_me"
+
 
   utter_goodbye:
-  - text: "Thanks for chatting! 🌴 Safe travels and remember, I'm here whenever you need travel recommendations or planning help! 🗺️ 🏖️\n\nHave a great journey! ⛱️"
+  - text: "Thanks for chatting! 🌴 Safe travels and remember, I'm here whenever you need travel & planning help or real-time recommendations! 🗺️ \n\nHave a great journey and enjoy! 🍹🍽️⛱️"
+
+  utter_handle_trip_planning:
+  - text: "(1) Great! Let's plan your trip. What's your destination city?"
+
+  utter_handle_city_explorer:
+  - text: "(2) Perfect! Which city would you like to explore?"
+
+  utter_handle_around_me:
+  - text: "(3) I'll help you discover what's nearby! Please share your location or tell me which city you're in."
+
+  utter_default:
+  - text: "I didn't quite catch that. Please choose an option or type 'menu' to see the options again."
+
 
 actions:
   - action_session_start
+  - utter_handle_trip_planning
+  - utter_handle_city_explorer
+  - utter_handle_around_me
+  - action_validate_intent
 
 session_config:
   session_expiration_time: 60

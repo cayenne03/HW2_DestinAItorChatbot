@@ -8,7 +8,7 @@ def format_message(content: Union[str, Dict[str, Any]]) -> str:
     Formats message content, handling both text and image carousels.
     """
     if isinstance(content, str):
-        return content.replace("\\n", "\n")
+        return (content.replace("\\n", "\n"))
     
     if isinstance(content, dict) and content.get("type") == "image_carousel":
         images = content.get("images", [])
@@ -24,79 +24,26 @@ def format_message(content: Union[str, Dict[str, Any]]) -> str:
     
     return str(content)
 
-# def chat_with_bot(message: str, history: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
-# 
-#     """Send user message to RASA and retrieve response."""
-#     rasa_url = "http://localhost:5005/webhooks/rest/webhook"
-#     response = requests.post(
-#         rasa_url,
-#         json={"sender": "user", "message": message}
-#     )
-    
-#     if not response.json():
-#         formatted_response = "Sorry, I didn't understand that."
-#     else:
-#         # Process each message from the bot
-#         bot_messages = []
-#         for msg in response.json():
-#             if "text" in msg:
-#                 bot_messages.append(format_message(msg["text"]))
-#             if "custom" in msg:
-#                 # Handle custom responses with images
-#                 custom_data = msg["custom"]
-#                 if isinstance(custom_data, str):
-#                     try:
-#                         custom_data = json.loads(custom_data)
-#                     except json.JSONDecodeError:
-#                         continue
-                
-#                 if custom_data.get("type") == "image_carousel":
-#                     bot_messages.append(format_message(custom_data))
-        
-#         formatted_response = "\n\n".join(bot_messages)
-    
-#     history.append({"role": "user", "content": message})
-#     history.append({"role": "assistant", "content": formatted_response})
-    
-#     return "", history
-
 
 def chat_with_bot(message: str, history: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
+
     """Send user message to RASA and retrieve response."""
-    test_response = [
-        {"text": "I found some great hotels in Athens for you! Here are some photos of Electra Metropolis:"},
-        {
-            "custom": {
-                "type": "image_carousel",
-                "images": [
-                    "https://media-cdn.tripadvisor.com/media/photo-l/2b/51/48/63/electra-metropolis-athens.jpg",
-                    "https://media-cdn.tripadvisor.com/media/photo-l/11/54/8a/24/deluxe-acropolis-view.jpg",
-                    "https://media-cdn.tripadvisor.com/media/photo-l/11/54/8c/50/superior-room.jpg",
-                    "https://media-cdn.tripadvisor.com/media/photo-l/15/33/f9/4c/athens.jpg"
-                ]
-            }
-        },
-        {"text": "I found thing else for you:"},
-        {
-            "custom": {
-                "type": "image_carousel",
-                "images": [
-                    "https://media-cdn.tripadvisor.com/media/photo-l/15/33/e8/fa/athens.jpg",
-                ]
-            }
-        }
-    ]
+    rasa_url = "http://localhost:5005/webhooks/rest/webhook"
+    response = requests.post(
+        rasa_url,
+        json={"sender": "user", "message": message}
+    )
     
-    response_data = test_response
-    
-    if not response_data:
+    if not response.json():
         formatted_response = "Sorry, I didn't understand that."
     else:
+        # Process each message from the bot
         bot_messages = []
-        for msg in response_data:
+        for msg in response.json():
             if "text" in msg:
                 bot_messages.append(format_message(msg["text"]))
             if "custom" in msg:
+                # Handle custom responses with images
                 custom_data = msg["custom"]
                 if isinstance(custom_data, str):
                     try:
@@ -105,17 +52,72 @@ def chat_with_bot(message: str, history: List[Dict[str, str]]) -> Tuple[str, Lis
                         continue
                 
                 if custom_data.get("type") == "image_carousel":
-                    # Limit to 3 images
-                    images = custom_data.get("images", [])[:3]
-                    custom_data["images"] = images
                     bot_messages.append(format_message(custom_data))
         
-        formatted_response = "\n".join(bot_messages)
+        formatted_response = "\n\n".join(bot_messages)
     
     history.append({"role": "user", "content": message})
     history.append({"role": "assistant", "content": formatted_response})
     
     return "", history
+
+
+
+# def chat_with_bot(message: str, history: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
+#     """Send user message to RASA and retrieve response."""
+#     test_response = [
+#         {"text": "I found some great hotels in Athens for you! Here are some photos of Electra Metropolis:"},
+#         {
+#             "custom": {
+#                 "type": "image_carousel",
+#                 "images": [
+#                     "https://media-cdn.tripadvisor.com/media/photo-l/2b/51/48/63/electra-metropolis-athens.jpg",
+#                     "https://media-cdn.tripadvisor.com/media/photo-l/11/54/8a/24/deluxe-acropolis-view.jpg",
+#                     "https://media-cdn.tripadvisor.com/media/photo-l/11/54/8c/50/superior-room.jpg",
+#                     "https://media-cdn.tripadvisor.com/media/photo-l/15/33/f9/4c/athens.jpg"
+#                 ]
+#             }
+#         },
+#         {"text": "I found thing else for you:"},
+#         {
+#             "custom": {
+#                 "type": "image_carousel",
+#                 "images": [
+#                     "https://media-cdn.tripadvisor.com/media/photo-l/15/33/e8/fa/athens.jpg",
+#                 ]
+#             }
+#         }
+#     ]
+#
+#     response_data = test_response
+#
+#     if not response_data:
+#         formatted_response = "Sorry, I didn't understand that."
+#     else:
+#         bot_messages = []
+#         for msg in response_data:
+#             if "text" in msg:
+#                 bot_messages.append(format_message(msg["text"]))
+#             if "custom" in msg:
+#                 custom_data = msg["custom"]
+#                 if isinstance(custom_data, str):
+#                     try:
+#                         custom_data = json.loads(custom_data)
+#                     except json.JSONDecodeError:
+#                         continue
+#
+#                 if custom_data.get("type") == "image_carousel":
+#                     # Limit to 3 images
+#                     images = custom_data.get("images", [])[:3]
+#                     custom_data["images"] = images
+#                     bot_messages.append(format_message(custom_data))
+#
+#         formatted_response = "\n".join(bot_messages)
+#
+#     history.append({"role": "user", "content": message})
+#     history.append({"role": "assistant", "content": formatted_response})
+#
+#     return "", history
 
 
 def fetch_first_message() -> List[Dict[str, str]]:
@@ -160,8 +162,8 @@ with gr.Blocks(css="footer {visibility: hidden}") as demo:
             type="messages",
             elem_classes="dark-chatbot",
             render_markdown=True,
-            bubble_full_width=True, # # Add this to ensure proper HTML rendering
-            sanitize_html=False  # # Add this to allow HTML content
+            bubble_full_width=True,
+            sanitize_html=False  # Important for HTML spaces to work
         )
         
         with gr.Row():
@@ -208,8 +210,9 @@ with gr.Blocks(css="footer {visibility: hidden}") as demo:
             color: white !important;
             padding: 10px !important;
             border-radius: 8px !important;
-            font-family: "Arial", sans-serif;
-            line-height: 1.5;
+            font-family: "Arial", sans-serif !important;
+            line-height: 1.5 !important;
+            white-space: pre-wrap !important;  /* Added this line */
         }
         
         .gradio-container {

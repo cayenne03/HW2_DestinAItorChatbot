@@ -7,18 +7,44 @@ rules:
   - intent: goodbye
   - action: utter_goodbye
 
-- rule: Show travel options
+- rule: Show my options
   steps:
-  - intent: show_travel_options
+  - intent: show_my_options
   - action: utter_welcome_menu
+  wait_for_user_input: true
 
 - rule: Greet user
   steps:
   - intent: greet
   - action: utter_welcome_menu
+  wait_for_user_input: true
 
 - rule: Session start
   steps:
   - action: action_session_start
   - action: utter_welcome_menu
+  wait_for_user_input: true
 
+# - rule: Fallback when confidence is low
+#   steps:
+#     - intent: nlu_fallback
+#     - action: utter_default
+
+# handle direct mapping of menu options
+- rule: Trip planning selected
+  steps:
+  - intent: trip_planning
+  - action: action_validate_intent
+  - action: utter_handle_trip_planning
+
+- rule: City explorer selected
+  steps:
+  - intent: city_explorer
+  - action: action_validate_intent
+  - action: utter_handle_city_explorer
+
+- rule: Around me selected
+  steps:
+  - intent: around_me
+  - action: action_validate_intent
+  - action: utter_handle_around_me

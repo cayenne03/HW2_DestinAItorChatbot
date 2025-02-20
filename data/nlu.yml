@@ -7,44 +7,111 @@ nlu:
     - hello
     - hi
     - hello there
+    - moin
     - good morning
     - good evening
-    - moin
-    - hey there
-    - let's go
-    - hey dude
-    - goodmorning
-    - goodevening
     - good afternoon
+    - hey there
+    - greetings
+    - hi there
+    - howdy
+    - hola
+    - hi DestinAItor
+    - hello travel assistant
 
 - intent: goodbye
   examples: |
-    - cu
-    - good by
-    - cee you later
-    - good night
     - bye
     - goodbye
-    - have a nice day
-    - see you around
-    - bye bye
     - see you later
+    - thanks, bye
+    - catch you later
+    - talk to you soon
+    - i am done
+    - bb
+    - cu
+    - cya
+    - bye bye
+    - have a good day
+    - cee ya later
+    - nighty
+    - thanks for your help
 
-- intent: show_travel_options
+- intent: show_my_options
   examples: |
-    - what can you help me with
-    - show me travel options
-    - what travel services do you offer
-    - I need help with travel planning
-    - show me what you can do
-    - travel options
-    - what are my options for travel
-    - how can you assist me with travel
-    - what travel assistance do you provide
-    - show me the travel menu
-    - I want to plan a trip
-    - help me with travel
-    - what travel help can you give
-    - show travel choices
-    - what kind of travel support do you offer
+    - what can you do for me
+    - show me my travel options
+    - what services do you offer
+    - help me choose an option
+    - show me the main menu
+    - what choices do I have
 
+- intent: nlu_fallback
+  examples: |
+    - I don't know
+    - random text
+    - gibberish words
+    - ???
+
+- intent: trip_planning
+  examples: |
+    - I want to plan my trip
+    - plan my vacation
+    - book flights and hotels
+    - help me with trip planning
+    - I want to book a flight to Rome
+    - reserve a hotel for my trip
+    - organize my travel itinerary
+    - arrange transportation for my trip
+    - help me plan a vacation
+    - schedule my holiday plans
+    - I choose option 1
+    - first option please
+    - number one
+    - let's go with trip planning
+    - trip planning option
+    - [1 st](option)
+    - [one](option)
+    - [option 1](option)
+    - the [first option](option)
+
+- intent: city_explorer
+  examples: |
+    - I want to explore a city
+    - show me city attractions
+    - tell me about local sights
+    - what can I do in Athens
+    - recommend places to visit in Paris
+    - where can I eat in Tokyo
+    - find museums and landmarks nearby
+    - I want to visit local monuments
+    - show me famous spots in the city
+    - explore places in the city
+    - find activities in the area
+    - number two
+    - let's go with city explorer
+    - show me what to do in a city
+    - [2 nd](option)
+    - [two](option)
+    - [option 2](option)
+    - the [second option](option)
+
+- intent: around_me
+  examples: |
+    - what's around me now
+    - find places near me
+    - nearby attractions please
+    - what can I find close by
+    - where's the nearest restaurant
+    - locate a nearby gas station
+    - show me things around my location
+    - what stores are near me
+    - are there coffee shops nearby
+    - find the closest pharmacy
+    - number three
+    - show me things around my location
+    - what's near me
+    - [3 rd](option)
+    - [three](option)
+    - [option 3](option)
+    - the [third option](option)
