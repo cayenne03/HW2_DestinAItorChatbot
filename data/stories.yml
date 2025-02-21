@@ -15,4 +15,3 @@ stories:
   steps:
     - intent: nlu_fallback
     - action: utter_default
-

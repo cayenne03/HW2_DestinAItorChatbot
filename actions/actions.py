@@ -5,6 +5,7 @@ from rasa_sdk import Action, Tracker, FormValidationAction
 from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet, SessionStarted, ActionExecuted
 
+from mylogger import get_logger
 from custom_models.flant5_classifier import FlanT5Classifier
 
 
