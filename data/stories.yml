@@ -1,17 +1,32 @@
 version: "3.1"
 
 stories:
-# - story: greet and show menu
-#   steps:
-#     - intent: greet
-#     - action: utter_welcome_menu
-
-# - story: show menu when asked
-#   steps:
-#     - intent: show_my_options
-#     - action: utter_welcome_menu
-
 - story: handle fallback
   steps:
-    - intent: nlu_fallback
-    - action: utter_default
+  - intent: nlu_fallback
+  - action: utter_default
+
+
+- story: Happy path flight booking
+  steps:
+    - intent: find_compare_flights
+      entities:
+        - city: "New York"
+          role: departure
+        - city: "London"
+          role: arrival
+    - action: action_validate_intent
+    - action: action_extract_flight_entities
+    - action: flight_booking_form
+    - active_loop: flight_booking_form
+    - slot_was_set:
+        - departure_city: "New York"
+        - arrival_city: "London"
+    - slot_was_set:
+        - departure_date: "2024-03-01"
+    - slot_was_set:
+        - return_date: "2024-03-10"
+    - slot_was_set:
+        - num_passengers: "2"
+    - active_loop: null
+    - action: utter_submit_flight_search

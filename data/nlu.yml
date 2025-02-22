@@ -37,28 +37,28 @@ nlu:
     - nighty
     - thanks for your help
 
-- intent: affirm
-  examples: |
-    - yes
-    - yup
-    - sure
-    - ok
-    - correct
-    - that's right
-    - y
-    - indeed
+# - intent: affirm
+#   examples: |
+#     - yes
+#     - yup
+#     - sure
+#     - ok
+#     - correct
+#     - that's right
+#     - y
+#     - indeed
 
-- intent: deny
-  examples: |
-    - no
-    - not
-    - nope
-    - nah
-    - n
-    - never
-    - not right
-    - incorrect
-    - wrong
+# - intent: deny
+#   examples: |
+#     - no
+#     - not
+#     - nope
+#     - nah
+#     - n
+#     - never
+#     - not right
+#     - incorrect
+#     - wrong
 
 - intent: show_my_options
   examples: |
@@ -68,6 +68,8 @@ nlu:
     - help me choose an option
     - show me the main menu
     - what choices do I have
+    - options I have?
+    - what's my choices
 
 - intent: nlu_fallback
   examples: |
@@ -76,51 +78,73 @@ nlu:
     - gibberish words
     - ???
 
-- intent: trip_planning
+- intent: find_compare_flights
   examples: |
-    - I want to plan my trip
-    - plan my vacation
-    - book flights and hotels
-    - help me with trip planning
     - I want to book a flight to Rome
-    - reserve a hotel for my trip
-    - organize my travel itinerary
-    - arrange transportation for my trip
-    - help me plan a vacation
-    - schedule my holiday plans
-    - I choose option 1
-    - first option please
+    - book a flight
+    - find flights to New York
+    - compare flights to Paris
+    - show me flight options
+    - help me find a cheap flight
+    - I need a flight to Tokyo
+    - look up flights for me
+    - flight booking please
+    - search for flights
+    - take me to Rome
     - number one
-    - let's go with trip planning
-    - trip planning option
+    - first option please
+    - I choose option 1
     - [1 st](option)
     - [one](option)
     - [option 1](option)
     - the [first option](option)
+    - let's go with flights
 
-- intent: city_explorer
+- intent: suggest_hotels
   examples: |
-    - I want to explore a city
-    - show me city attractions
-    - tell me about local sights
-    - what can I do in Athens
-    - recommend places to visit in Paris
-    - where can I eat in Tokyo
-    - find museums and landmarks nearby
-    - I want to visit local monuments
-    - show me famous spots in the city
-    - explore places in the city
-    - find activities in the area
+    - suggest a hotel in Rome
+    - find me a hotel
+    - book a hotel in London
+    - show me hotel options
+    - I need a place to stay in Paris
+    - recommend accommodations in Athens
+    - help me find a hotel
+    - hotel booking please
+    - find accommodations for my trip
+    - where can I stay in Berlin
     - number two
-    - let's go with city explorer
-    - show me what to do in a city
+    - second option please
+    - I choose option 2
     - [2 nd](option)
     - [two](option)
     - [option 2](option)
     - the [second option](option)
+    - let's go with hotels
+
+- intent: explore_activities_places
+  examples: |
+    - help me explore museums in Paris
+    - suggest attractions in Rome
+    - what can I do in Athens
+    - recommend local places to visit
+    - find activities in the city
+    - tell me about tourist spots in Barcelona
+    - where can I eat sushi in Tokyo
+    - show me places to visit in Madrid
+    - what attractions are in Berlin
+    - find local activities
+    - number three
+    - third option please
+    - I choose option 3
+    - [3 rd](option)
+    - [three](option)
+    - [option 3](option)
+    - the [third option](option)
+    - let's go with activities
 
 - intent: around_me
   examples: |
+    - show me what restaurants are nearby
     - what's around me now
     - find places near me
     - nearby attractions please
@@ -131,10 +155,11 @@ nlu:
     - what stores are near me
     - are there coffee shops nearby
     - find the closest pharmacy
-    - number three
-    - show me things around my location
-    - what's near me
-    - [3 rd](option)
-    - [three](option)
-    - [option 3](option)
-    - the [third option](option)
+    - number four
+    - fourth option please
+    - I choose option 4
+    - [4 th](option)
+    - [four](option)
+    - [option 4](option)
+    - the [fourth option](option)
+    - let's go with around me

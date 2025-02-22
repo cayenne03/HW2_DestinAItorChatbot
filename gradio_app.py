@@ -158,7 +158,7 @@ with gr.Blocks(css="footer {visibility: hidden}") as demo:
         )
         
         chatbot = gr.Chatbot(
-            height=700,
+            height=750,
             type="messages",
             elem_classes="dark-chatbot",
             render_markdown=True,

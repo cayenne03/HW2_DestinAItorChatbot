@@ -25,26 +25,48 @@ rules:
   - action: utter_welcome_menu
   wait_for_user_input: true
 
-# - rule: Fallback when confidence is low
+# - rule: Flights selected
 #   steps:
-#     - intent: nlu_fallback
-#     - action: utter_default
+#   - intent: find_compare_flights
+#   - action: utter_flights
 
-# handle direct mapping of menu options
-- rule: Trip planning selected
-  steps:
-  - intent: trip_planning
-  - action: action_validate_intent
-  - action: utter_handle_trip_planning
+# - rule: Hotels selected
+#   steps:
+#   - intent: suggest_hotels
+#   - action: utter_hotels
 
-- rule: City explorer selected
-  steps:
-  - intent: city_explorer
-  - action: action_validate_intent
-  - action: utter_handle_city_explorer
+# - rule: Activities selected
+#   steps:
+#   - intent: explore_activities_places
+#   - action: utter_activities
 
-- rule: Around me selected
+# - rule: Around me selected
+#   steps:
+#   - intent: around_me
+#   - action: utter_around_me
+
+
+- rule: Validate and activate flight booking form
   steps:
-  - intent: around_me
-  - action: action_validate_intent
-  - action: utter_handle_around_me
+    - intent: find_compare_flights
+    - action: action_validate_intent
+    - action: action_extract_flight_entities
+    - action: flight_booking_form
+    - active_loop: flight_booking_form
+
+- rule: Submit flight booking form
+  condition:
+    - active_loop: flight_booking_form
+  steps:
+    - action: flight_booking_form
+    - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
+    - action: utter_submit_flight_search
+
+- rule: Handle form input during flight booking
+  condition:
+    - active_loop: flight_booking_form
+  steps:
+    - action: flight_booking_form
+    - active_loop: flight_booking_form

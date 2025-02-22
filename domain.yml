@@ -4,13 +4,86 @@ intents:
   - greet
   - goodbye
   - show_my_options
-  - trip_planning
-  - city_explorer
-  - around_me
   - nlu_fallback
+  - find_compare_flights
+  - suggest_hotels
+  - explore_activities_places
+  - around_me
 
 entities:
   - option
+  - city
+  - date
+  - number
+
+slots:
+  departure_city:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: city
+      role: departure
+    - type: from_text
+      conditions:
+      - active_loop: flight_booking_form
+        requested_slot: departure_city
+
+  arrival_city:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: city
+      role: arrival
+    - type: from_text
+      conditions:
+      - active_loop: flight_booking_form
+        requested_slot: arrival_city
+
+  departure_date:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: date
+      role: departure
+    - type: from_text
+      conditions:
+      - active_loop: flight_booking_form
+        requested_slot: departure_date
+
+  return_date:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: date
+      role: return
+    - type: from_text
+      conditions:
+      - active_loop: flight_booking_form
+        requested_slot: return_date
+
+  num_passengers:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: number
+    - type: from_text
+      conditions:
+      - active_loop: flight_booking_form
+        requested_slot: num_passengers
+
+forms:
+  flight_booking_form:
+    required_slots:
+      - departure_city
+      - arrival_city
+      - departure_date
+      - return_date
+      - num_passengers
 
 responses:
   utter_welcome_menu:
@@ -18,22 +91,26 @@ responses:
 
       I can assist you with the following options:\n
 
-      👉 **Complete Trip Planning** 🎯 🏨 ✈️\n
-          • Find and compare flights\n
+      ✈️ **Find & Compare Flights**\n
+          • Search and compare flight options\n
+          • Get details for round-trip or one-way flights\n
+
+      🏨 **Suggest Hotels**\n
           • Discover hotels that match your style\n
-          • Get personalized day-by-day itineraries\n
+          • Find accommodations near attractions\n
 
-      👉 **City Explorer** 🏛️ 🏖️ 🍽️\n
-          • Local restaurant & cuisine recommendations\n
-          • Must-visit attractions (historical sites, monuments, tours)\n
-          • Outdoor & indoor activities\n
+      🏛️ **Explore Activities & Places**\n
+          • Local restaurants & cuisine recommendations 🍽️\n
+          • Must-visit attractions 🏖️🏛️\n
+          • Museums, tours, and cultural spots 🖼️\n
+          • Outdoor & indoor activities 🎢\n
 
-      👉 **Around Me Now!** 📍🍹🍽️\n
+      📍 **Around Me Now!**\n
           • Discover hidden gems near your current location\n
           • Immediate dining options and local activities\n\n
 
       🚀 **Reply by writing like below**:\n
-       - I want to plan a trip to London next week\n
+       - I want to book a flight to London next week\n
        - Suggest me a hotel in Rome\n
        - Help me explore museums in Paris\n
        - Where to eat sushi in Athens\n
@@ -41,36 +118,66 @@ responses:
 
       So how can I help you today? 😊"
     buttons:
-      - title: "Trip Planning"
-        payload: "/trip_planning"
-      - title: "City Explorer"
-        payload: "/city_explorer"
-      - title: "Around Me Now"
+      - title: "Flights"
+        payload: "/flights"
+      - title: "Hotels"
+        payload: "/hotels"
+      - title: "Activities"
+        payload: "/activities"
+      - title: "Around Me"
         payload: "/around_me"
 
+  utter_default:
+  - text: "I didn't quite catch that. Please choose an option or type 'menu' to see the options again."
 
   utter_goodbye:
   - text: "Thanks for chatting! 🌴 Safe travels and remember, I'm here whenever you need travel & planning help or real-time recommendations! 🗺️ \n\nHave a great journey and enjoy! 🍹🍽️⛱️"
 
-  utter_handle_trip_planning:
-  - text: "(1) Great! Let's plan your trip. What's your destination city?"
+  # utter_flights:
+  # - text: "FLIGHTS"
 
-  utter_handle_city_explorer:
-  - text: "(2) Perfect! Which city would you like to explore?"
+  utter_hotels:
+  - text: "HOTELS"
 
-  utter_handle_around_me:
-  - text: "(3) I'll help you discover what's nearby! Please share your location or tell me which city you're in."
+  utter_activities:
+  - text: "ACTIVITIES"
 
-  utter_default:
-  - text: "I didn't quite catch that. Please choose an option or type 'menu' to see the options again."
+  utter_around_me:
+  - text: "AROUND ME"
+
+
+  utter_ask_departure_city:
+    - text: "From which city would you like to depart?"
+
+  utter_ask_arrival_city:
+    - text: "To which city would you like to fly?"
+
+  utter_ask_departure_date:
+    - text: "When would you like to depart?"
+
+  # utter_ask_flight_type:
+  #   - text: "Is this a one-way or round-trip flight?"
+
+  utter_ask_return_date:
+    - text: "When would you like to return?"
+
+  utter_ask_num_passengers:
+    - text: "For how many passengers?"
+
+  utter_submit_flight_search:
+    - text: "Great! Let me search flights for {num_passengers} passenger(s) from {departure_city} to {arrival_city}, departing on {departure_date}."
 
 
 actions:
   - action_session_start
   - action_validate_intent
-  - utter_handle_trip_planning
-  - utter_handle_city_explorer
-  - utter_handle_around_me
+  # - utter_flights
+  # - utter_hotels
+  # - utter_activities
+  # - utter_around_me
+
+  - action_extract_flight_entities
+  - validate_flight_booking_form
 
 session_config:
   session_expiration_time: 60

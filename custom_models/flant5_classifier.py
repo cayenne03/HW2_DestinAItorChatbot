@@ -24,23 +24,46 @@ class FlanT5Classifier:
     @staticmethod
     def create_prompt(sentence: str) -> str:
         return f"""
-You are an AI assistant that classifies user sentences into one of the following categories/options numerically ordered:
-Category 1. => trip_planning: Sentences where the user is organizing a trip. This includes booking flights, reserving hotels, arranging transportation, or creating travel itineraries. It focuses on how to get to the destination and where to stay.
-Category 2. => city_explorer: Sentences where the user wants to explore attractions, food, and activities in a city. This includes visiting monuments, museums, restaurants, or finding local events and cultural experiences.
-Category 3. => around_me: Sentences where the user wants to find nearby places based on their current location. This includes searching for nearby restaurants, gas stations, pharmacies, or other local services.
-Category 4 => out_of_scope: Sentences unrelated to travel, trip planning, or exploring places. This includes personal statements, general questions, or any topics not connected to travel.
+You are an AI assistant that classifies user sentences into one of the following categories:
+
+find_compare_flights: Sentences where the user is looking to find, book, or compare flights. This includes round-trip, one-way flights, or general flight information.
+suggest_hotels: Sentences where the user wants to find, book, or get recommendations for hotels or accommodations.
+explore_activities_places: Sentences where the user wants to explore activities, attractions, restaurants, or places in a city. This includes museums, cultural spots, and sightseeing.
+around_me_now: Sentences where the user wants to find places nearby based on their current location. This includes nearby restaurants, attractions, gas stations, or services close to current address or location.
+out_of_scope: Sentences unrelated to travel, flights, hotels, exploring places, or finding nearby locations.
 
 Examples:
-User: I want to book a flight to Rome.
-Category: trip_planning
+User: I want to book a flight to Rome next week.
+Category: find_compare_flights
 
-User: Show me restaurants in Paris.
-Category: city_explorer
+User: Can you suggest a hotel in Paris?
+Category: suggest_hotels
 
-User: What's near me right now?
-Category: around_me
+User: What museums can I visit in Athens?
+Category: explore_activities_places
 
-User: Let's watch movie tonight
+User: Show me coffee shops near me.
+Category: around_me_now
+
+User: What's the weather like tomorrow?
+Category: out_of_scope
+
+User: I need to compare flights to Tokyo.
+Category: find_compare_flights
+
+User: Where can I stay in Berlin?
+Category: suggest_hotels
+
+User: Recommend a good restaurant in Rome.
+Category: explore_activities_places
+
+User: Is there a pharmacy nearby?
+Category: around_me_now
+
+User: Where is the best ravioli in Napoly?
+Category: explore_activities_places
+
+User: I want to watch a movie tonight.
 Category: out_of_scope
 
 Now classify the following sentence:
