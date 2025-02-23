@@ -1,6 +1,8 @@
-from typing import Any, Text, Dict, List
-from mylogger import get_logger
+from typing import Any, Text, Dict, List, Optional, Tuple
+import os
+import json
 
+from dotenv import load_dotenv
 from rasa_sdk import Action, Tracker, FormValidationAction
 from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet, SessionStarted, ActionExecuted, FollowupAction, UserUtteranceReverted
@@ -9,11 +11,16 @@ from rasa_sdk.types import DomainDict
 from mylogger import get_logger
 from custom_models.flant5_classifier import FlanT5Classifier
 from custom_models.spacy_nlp_md import nlp
+from utils.apis.openai_client_api import OpenAIClient
 from utils.date_utils import parse_date_to_iso
 
 
+load_dotenv()
+
 logger = get_logger(__name__)
 logger.debug("Actions module loaded")
+
+openai_client = OpenAIClient(api_key=os.getenv('OPENAI_API_KEY'))
 
 class ActionSessionStart(Action):
     def name(self) -> Text:
@@ -40,6 +47,10 @@ class ActionValidateIntent(Action):
     def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        logger.debug("ActionValidateIntent started")
+        logger.debug(f"Active loop: {tracker.active_loop}")
+        logger.debug(f"All slots: {tracker.current_slot_values()}")
 
         active_loop = tracker.active_loop.get('name')
         if active_loop:
@@ -86,19 +97,182 @@ class ActionValidateIntent(Action):
         return []
 
 class ActionExtractFlightEntities(Action):
-    def __init__(self):
-        # fake values to simulate extractor missing some values
-        self.extracted_fake = {
-            "departure_city": "London",
-            "arrival_city": "Rome",
-            "departure_date": None,
-            "return_date": None,
-            "num_passengers": None
-        }
-
     def name(self) -> Text:
         return "action_extract_flight_entities"
     
+    def _extract_flight_type(self, doc) -> Optional[str]:
+        """Extract flight type (oneway/round_trip)"""
+        for ent in doc.ents:
+            if ent.label_ == "FLIGHT_TYPE" and ent._.id:
+                logger.info(f"Found flight type: {ent._.id}")
+
+                return ent._.id
+        return None
+
+
+    def _extract_cities(self, doc) -> Tuple[Optional[str], Optional[str]]:
+        """Extract departure and arrival cities"""
+        departure_city = None
+        arrival_city = None
+        used_cities = set()
+
+        logger.debug(f"Processing text for city extraction: {doc.text}")
+
+        # 1st look for explicit from/to indicators
+        found_indicators = []
+
+        for ent in doc.ents:
+            if ent.label_ == "LOCATION_INDICATOR" and ent._.id:
+                found_indicators.append((ent._.id, ent.start, ent.end))
+
+        logger.debug(f"Found indicators: {found_indicators}")
+
+        # 2nd look for cities after each indicator
+        for indicator_id, start, end in found_indicators:
+            next_idx = end
+            while next_idx < len(doc) and doc[next_idx].is_stop:
+                next_idx += 1
+
+            if next_idx >= len(doc):
+                continue
+
+            # try to find a city (up to 3 tokens)
+            for end_idx in range(next_idx + 1, min(next_idx + 4, len(doc))):
+                potential_city = doc[next_idx:end_idx].text
+                validation_doc = nlp(potential_city)
+
+                if any(val_ent.label_ == "GPE" for val_ent in validation_doc.ents):
+                    if indicator_id == "departure" and not departure_city:
+                        departure_city = potential_city
+                        used_cities.add(potential_city)
+                        logger.info(f"Found departure city with indicator: {departure_city}")
+                        break
+                    elif indicator_id == "arrival" and not arrival_city:
+                        arrival_city = potential_city
+                        used_cities.add(potential_city)
+                        logger.info(f"Found arrival city with indicator: {arrival_city}")
+                        break
+
+        # if we're still missing cities, look for GPEs
+        if not (departure_city and arrival_city):
+            gpe_entities = [ent.text for ent in doc.ents if ent.label_ == "GPE"
+                        and ent.text not in used_cities]
+            logger.debug(f"Found unused GPE entities: {gpe_entities}")
+
+            # Use context to determine city roles
+            if gpe_entities:
+                # If we have 'to' or arrow, second GPE is arrival
+                if ("to" in doc.text.lower() or "->" in doc.text or "→" in doc.text) and len(gpe_entities) >= 2:
+                    if not departure_city:
+                        departure_city = gpe_entities[0]
+                    if not arrival_city:
+                        arrival_city = gpe_entities[1]
+                # If we only found one GPE
+                elif len(gpe_entities) == 1:
+                    if "to" in doc.text.lower() and not arrival_city:
+                        arrival_city = gpe_entities[0]
+                    elif "from" in doc.text.lower() and not departure_city:
+                        departure_city = gpe_entities[0]
+                    # If no indicator, default to arrival (most common case)
+                    elif not arrival_city:
+                        arrival_city = gpe_entities[0]
+
+        logger.info(f"Final cities - departure: {departure_city}, arrival: {arrival_city}")
+
+        return departure_city, arrival_city
+
+
+    def _extract_dates(self, doc, flight_type: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+        """Extract departure and return dates"""
+        departure_date = None
+        return_date = None
+
+        # getting all potential date texts (both from spaCy and text patterns)
+        date_texts = []
+
+        # getting dates from spaCy entities
+        date_texts.extend([ent.text for ent in doc.ents if ent.label_ == "DATE"])
+
+        # also try to parse any potential date expressions
+        for token in doc:
+            potential_date = parse_date_to_iso(token.text)
+            if potential_date:
+                date_texts.append(token.text)
+
+        logger.debug(f"Found potential date expressions: {date_texts}")
+
+        # try to parse dates in order found
+        parsed_dates = []
+        for date_text in date_texts:
+            parsed_date = parse_date_to_iso(date_text)
+            if parsed_date and parsed_date not in parsed_dates:
+                parsed_dates.append(parsed_date)
+
+        logger.debug(f"Successfully parsed dates: {parsed_dates}")
+
+        # assign dates based on order and context
+        if parsed_dates:
+            departure_date = parsed_dates[0]
+            if len(parsed_dates) > 1:
+                return_date = parsed_dates[1]
+
+        logger.info(f"Final dates - departure: {departure_date}, return: {return_date}")
+
+        return departure_date, return_date
+
+
+    def _extract_passengers(self, doc) -> Optional[str]:
+        """Extract number of passengers"""
+        for ent in doc.ents:
+            if ent.label_ == "PASSENGERS":
+                for token in ent:
+                    if token.like_num:
+                        try:
+                            num = int(token.text)
+                            if num > 0:
+                                logger.info(f"Found {num} passengers")
+                                return str(num)
+                        except ValueError:
+                            pass
+        return None
+
+    # TODO: extraction stuff logic could just be an LLM call 🤷‍♀️
+    def extract_entities(self, text: str, domain: Dict[Text, Any]) -> Dict[str, Any]:
+        forms = domain.get('forms', {})
+        required_slots = forms.get('flight_booking_form', {}).get('required_slots', [])
+
+        try:
+            doc = nlp(text)
+            extracted = {slot: None for slot in required_slots}
+
+            # Extract all entities
+            flight_type = self._extract_flight_type(doc)
+            departure_city, arrival_city = self._extract_cities(doc)
+            departure_date, return_date = self._extract_dates(doc, flight_type)
+            num_passengers = self._extract_passengers(doc)
+
+            # Update extracted dict with found values
+            if "departure_city" in extracted:
+                extracted["departure_city"] = departure_city
+            if "arrival_city" in extracted:
+                extracted["arrival_city"] = arrival_city
+            if "departure_date" in extracted:
+                extracted["departure_date"] = departure_date
+            if "return_date" in extracted:
+                extracted["return_date"] = return_date
+            if "num_passengers" in extracted:
+                extracted["num_passengers"] = num_passengers
+            # if "flight_type" in extracted:
+            #     extracted["flight_type"] = flight_type
+
+            logger.info(f"Extracted entities: {extracted}")
+            return extracted
+
+        except Exception as e:
+            logger.error(f"Error in entity extraction: {e}")
+            return {slot: None for slot in required_slots}
+
+
     def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
@@ -109,26 +283,35 @@ class ActionExtractFlightEntities(Action):
             return []
             
         latest_message = tracker.latest_message.get('text')
-        extracted_entities = self.extracted_fake 
-        
         events = []
         forms = domain.get('forms', {})
         required_slots = forms.get('flight_booking_form', {}).get('required_slots', [])
         logger.info(f"Required slots: {required_slots}")
 
-        # log the extracted entities before setting slots
-        logger.info(f"Extracted entities: {extracted_entities}")
+        # reset all slots at the start
+        for slot in required_slots:
+            events.append(SlotSet(slot, None))
 
-        # set slots and log each one
-        for entity, value in extracted_entities.items():
-            if entity in required_slots and value is not None:
-                logger.info(f"Setting slot {entity} = {value}")
-                events.append(SlotSet(entity, value))
-        
-        # check which required slots are still empty
-        current_slots = tracker.current_slot_values()
-        logger.info(f"Current slots after setting: {current_slots}")
-        missing_slots = [slot for slot in required_slots if not current_slots.get(slot)]
+        try:
+            prompt = openai_client.create_flight_extraction_prompt(latest_message)
+            # extracted_entities = self.extract_entities(latest_message, domain)
+            extracted_entities = openai_client.get_completion(prompt)
+            logger.info(f"Extracted entities: {extracted_entities}")
+
+            # set slots and log each one
+            for entity, value in extracted_entities.items():
+                if entity in required_slots and value is not None:
+                    logger.info(f"Setting slot {entity} = {value}")
+                    events.append(SlotSet(entity, value))
+        except Exception as e:
+            logger.error(f"Error in entity extraction: {e}")
+
+            # if extraction fails, just reset slots and return
+            return events
+
+        # Check missing slots based on extracted entities
+        missing_slots = [slot for slot in required_slots
+                    if slot not in extracted_entities or extracted_entities[slot] is None]
         logger.info(f"Missing slots: {missing_slots}")
         
         if missing_slots:

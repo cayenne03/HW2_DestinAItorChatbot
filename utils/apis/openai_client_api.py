@@ -1,6 +1,8 @@
 from typing import Dict
 import time
 import json
+from datetime import date
+
 from openai import OpenAI
 
 
@@ -12,7 +14,7 @@ class OpenAIClient:
     
 
     @staticmethod
-    def create_prompt(city: str) -> str:
+    def create_airport_prompt(city: str) -> str:
         return f'''You are a travel and aviation expert. 
 Return information about all major unique commercial airports in {city} in the exact JSON format below.
 Only include actively operating commercial airports.
@@ -31,6 +33,29 @@ Required format:
            "IATA_CODE": "3_letter_code"
        }}
    ]
+}}'''
+
+    @staticmethod
+    def create_flight_extraction_prompt(request: str) -> str:
+        today = date.today().strftime("%Y-%m-%d")
+        return f'''
+This is a request for booking flights: "{request}".
+Please extract the following information if it exists.
+
+Rules:
+- For dates, use the format YYYY-MM-DD, while today's date is {today}.
+- For cities be sure to write the official city name, eg. if "big Apple" is mentioned write New York
+if "capital of France" is mentioned write Paris.
+- If a field is not mentioned, set its value to `null`.
+- Return JSON only, no other text.
+
+Required format:
+{{
+  "departure_city": city_name,
+  "arrival_city": city_name,
+  "departure_date": date,
+  "return_date": date,
+  "num_passengers": number
 }}'''
 
 

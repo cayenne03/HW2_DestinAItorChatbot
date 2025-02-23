@@ -30,3 +30,22 @@ stories:
         - num_passengers: "2"
     - active_loop: null
     - action: utter_submit_flight_search
+
+
+- story: Happy path hotel booking
+  steps:
+    - intent: suggest_hotels
+    - action: action_validate_intent
+    - action: utter_hotels
+
+- story: Happy path activities booking
+  steps:
+    - intent: explore_activities_places
+    - action: action_validate_intent
+    - action: utter_activities
+
+- story: Happy path around me booking
+  steps:
+    - intent: around_me
+    - action: action_validate_intent
+    - action: utter_around_me

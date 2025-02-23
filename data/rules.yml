@@ -25,26 +25,8 @@ rules:
   - action: utter_welcome_menu
   wait_for_user_input: true
 
-# - rule: Flights selected
-#   steps:
-#   - intent: find_compare_flights
-#   - action: utter_flights
 
-# - rule: Hotels selected
-#   steps:
-#   - intent: suggest_hotels
-#   - action: utter_hotels
-
-# - rule: Activities selected
-#   steps:
-#   - intent: explore_activities_places
-#   - action: utter_activities
-
-# - rule: Around me selected
-#   steps:
-#   - intent: around_me
-#   - action: utter_around_me
-
+##### FLIGHT SEARCH #####
 
 - rule: Validate and activate flight booking form
   steps:
@@ -53,6 +35,7 @@ rules:
     - action: action_extract_flight_entities
     - action: flight_booking_form
     - active_loop: flight_booking_form
+
 
 - rule: Submit flight booking form
   condition:
@@ -63,6 +46,9 @@ rules:
     - slot_was_set:
         - requested_slot: null
     - action: utter_submit_flight_search
+    # ready for next input, new intent etc.
+    - action: action_listen
+
 
 - rule: Handle form input during flight booking
   condition:
