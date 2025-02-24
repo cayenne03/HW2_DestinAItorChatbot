@@ -12,6 +12,7 @@ from rasa_sdk.types import DomainDict
 from mylogger import get_logger
 from custom_models.flant5_classifier import FlanT5Classifier
 from custom_models.spacy_nlp_md import nlp
+from custom_models.city_area_extractor_ner import CityAreaExtractor
 from utils.apis.openai_client_api import OpenAIClient
 from utils.apis.amadeus_api import AmadeusAPI
 from utils.date_utils import parse_date_to_iso
@@ -24,6 +25,8 @@ logger.debug("Actions module loaded")
 
 openai_client = OpenAIClient(api_key=os.getenv('OPENAI_API_KEY'))
 amadeus = AmadeusAPI(client_id=os.getenv('AMADEUS_API_KEY'), client_secret=os.getenv('AMADEUS_API_SECRET'))
+
+city_extractor = CityAreaExtractor()
 
 class ActionSessionStart(Action):
     def name(self) -> Text:
@@ -322,6 +325,130 @@ class ActionExtractFlightEntities(Action):
             events.append(FollowupAction("flight_searching_form"))
         
         return events
+
+class ActionExtractHotelEntities(Action):
+    def name(self) -> Text:
+        return "action_extract_hotel_entities"
+
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        active_loop = tracker.active_loop.get('name')
+        if active_loop:
+            logger.debug(f"Skipping entity extraction - active form: {active_loop}")
+            return []
+
+        latest_message = tracker.latest_message.get('text')
+        events = []
+        forms = domain.get('forms', {})
+        required_slots = forms.get('hotel_searching_form', {}).get('required_slots', [])
+        logger.info(f"Required slots: {required_slots}")
+
+        # reset all slots at the start
+        for slot in required_slots:
+            events.append(SlotSet(slot, None))
+
+        try:
+            # 1. extract city using the transformer-based NER (better for city names)
+            transformer_city = city_extractor.extract_city(latest_message)
+            logger.info(f"Transformer city: {transformer_city}")
+            # 2. process with spaCy to find organizations and facilities
+            doc = nlp(latest_message)
+
+            # get the first ORG/FAC
+            first_org_fac = next((ent.text for ent in doc.ents if ent.label_ in ["ORG", "FAC"]), None)
+            logger.info(f"First ORG/FAC: {first_org_fac}")
+
+            # get the first GPE/LOC (if transformer didn't find a city)
+            first_gpe_loc = None
+            if not transformer_city:
+                first_gpe_loc = next((ent.text for ent in doc.ents if ent.label_ in ["GPE", "LOC"]), None)
+                logger.info(f"First GPE/LOC: {first_gpe_loc}")
+
+            # construct hotel_city_text based on available information
+            hotel_city_text = None
+
+            if transformer_city and first_org_fac:
+                # if we have both city from transformer and facility from spaCy
+                hotel_city_text = f"in {transformer_city} around {first_org_fac}"
+                logger.info(f"1. Hotel city text: {hotel_city_text}")
+            elif first_gpe_loc and first_org_fac:
+                # if we have both location from spaCy and organization/facility
+                hotel_city_text = f"in {first_gpe_loc} around {first_org_fac}"
+                logger.info(f"2. Hotel city text: {hotel_city_text}")
+            elif transformer_city:
+                # if we only have city from transformer
+                hotel_city_text = transformer_city
+                logger.info(f"3. Hotel city text: {hotel_city_text}")
+            elif first_gpe_loc:
+                # if we only have location from spaCy
+                hotel_city_text = first_gpe_loc
+                logger.info(f"4. Hotel city text: {hotel_city_text}")
+            elif first_org_fac:
+                # if we only have organization/facility
+                hotel_city_text = f"around {first_org_fac}"
+                logger.info(f"5. Hotel city text: {hotel_city_text}")
+
+            # only set the slot if we actually found an entity
+            if "hotel_city" in required_slots and hotel_city_text is not None:
+                logger.info(f"Setting slot hotel_city = {hotel_city_text}")
+                events.append(SlotSet("hotel_city", hotel_city_text))
+
+        except Exception as e:
+            logger.error(f"Error in entity extraction: {e}")
+            # if extraction fails, just return events with reset slots
+            return events
+
+        # check which required slots are still missing
+        # this determines if we need to activate the form for user input
+        missing_slots = [slot for slot in required_slots
+                        if tracker.get_slot(slot) is None]
+        logger.info(f"Missing slots: {missing_slots}")
+
+        # if there are missing required slots, activate the form to collect them from the user
+        if missing_slots:
+            logger.info("Activating form to collect missing slots")
+            events.append(FollowupAction("hotel_searching_form"))
+
+        return events
+
+
+class ActionContinuePromptSearch(Action):
+    def name(self) -> Text:
+        return "action_continue_prompt_search"
+
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        # check which form was just completed
+        previous_events = list(tracker.events)
+        previous_form = None
+
+        # find the most recent form that was active
+        for event in reversed(previous_events):
+            if event.get('event') == 'active_loop' and event.get('name') is None:
+                # this indicates a form was deactivated
+                for earlier_event in reversed(previous_events[:previous_events.index(event)]):
+                    if earlier_event.get('event') == 'active_loop' and earlier_event.get('name'):
+                        previous_form = earlier_event.get('name')
+                        break
+                break
+
+        # get relevant slots based on which form was completed
+        if previous_form == "flight_searching_form":
+            city = tracker.get_slot("arrival_city")
+            message = f"You can continue prompting me to explore flights, hotels and activities in {city} or any other city."
+        elif previous_form == "hotel_searching_form":
+            area = tracker.get_slot("hotel_city")
+            message = f"You can continue prompting me like `hotels around or near {area}` or explore flights and activities in any other city/area."
+        else:
+            # default message if we can't determine the form
+            message = "You can continue prompting me to explore flights, hotels and activities in any city."
+
+        dispatcher.utter_message(text=message)
+        return []
 
 
 class ActionSearchFlights(Action):

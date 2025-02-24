@@ -47,7 +47,7 @@ rules:
         - requested_slot: null
     - action: utter_submit_flight_search
     - action: action_search_flights
-    - action: utter_continue_search
+    - action: action_continue_prompt_search
     # ready for next input, new intent etc.
     - action: action_listen
 
@@ -58,3 +58,36 @@ rules:
   steps:
     - action: flight_searching_form
     - active_loop: flight_searching_form
+
+
+##### HOTEL SEARCH #####
+
+- rule: Activate hotel searching form
+  steps:
+    - intent: suggest_hotels
+    - action: action_validate_intent
+    - action: action_extract_hotel_entities
+    - action: hotel_searching_form
+    - active_loop: hotel_searching_form
+
+
+- rule: Submit hotel searching form
+  condition:
+    - active_loop: hotel_searching_form
+  steps:
+    - action: hotel_searching_form
+    - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
+    - action: utter_submit_hotel_search
+    # - action: action_search_hotels
+    - action: action_continue_prompt_search
+    - action: action_listen
+
+
+- rule: Handle form input during hotel searching
+  condition:
+    - active_loop: hotel_searching_form
+  steps:
+    - action: hotel_searching_form
+    - active_loop: hotel_searching_form

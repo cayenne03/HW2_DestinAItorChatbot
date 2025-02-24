@@ -76,6 +76,19 @@ slots:
       - active_loop: flight_searching_form
         requested_slot: num_passengers
 
+
+  hotel_city:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: city
+    - type: from_text
+      conditions:
+      - active_loop: hotel_searching_form
+        requested_slot: hotel_city
+
+
 forms:
   flight_searching_form:
     required_slots:
@@ -85,9 +98,14 @@ forms:
       - return_date
       - num_passengers
 
+  hotel_searching_form:
+    required_slots:
+      - hotel_city
+
+
 responses:
   utter_welcome_menu:
-  - text: "Hey there! 👋 I'm **DestinAItor**, your AI-powered travel companion! 🌍\n
+  - text: "Hey there! 👋 I'm **DestinAItor**, your AI-powered travel companion! ✈️ 🌍\n
 
       I can assist you with the following options:\n
 
@@ -133,9 +151,6 @@ responses:
   utter_goodbye:
   - text: "Thanks for chatting! 🌴 Safe travels and remember, I'm here whenever you need travel & planning help or real-time recommendations! 🗺️ \n\nHave a great journey and enjoy! 🍹🍽️⛱️"
 
-  utter_hotels:
-  - text: "HOTELS"
-
   utter_activities:
   - text: "ACTIVITIES"
 
@@ -164,20 +179,32 @@ responses:
   utter_submit_flight_search:
     - text: "Great! Let me search flights for {num_passengers} passenger(s) from {departure_city} to {arrival_city}, departing on {departure_date} and arriving on {return_date}."
 
-  utter_continue_search:
-    - text: "You can continue prompting me to explore hotels and activities in {arrival_city} or any other city."
+  # utter_continue_search:
+  #   - text: "You can continue prompting me to explore flights, hotels and activities in {arrival_city} or any other city."
+
+  ##### HOTEL SEARCHING #####
+  utter_ask_hotel_city:
+    - text: "Which city would you like to search hotels for? You can also use broader city areas."
+
+  utter_submit_hotel_search:
+    - text: "Great! Let me search for hotels {hotel_city}."
+
 
 actions:
   - action_session_start
   - action_validate_intent
-  # - utter_flights
-  # - utter_hotels
+
   # - utter_activities
   # - utter_around_me
 
   - action_extract_flight_entities
   - validate_flight_searching_form
   - action_search_flights
+
+  - action_continue_prompt_search
+
+  - action_extract_hotel_entities
+  # - action_search_hotels
 
 session_config:
   session_expiration_time: 60

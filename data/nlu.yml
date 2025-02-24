@@ -70,6 +70,7 @@ nlu:
     - what choices do I have
     - options ?
     - what's my choices
+    - opts ?
 
 - intent: nlu_fallback
   examples: |
