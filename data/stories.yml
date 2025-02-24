@@ -29,7 +29,12 @@ stories:
     - slot_was_set:
         - num_passengers: "2"
     - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
     - action: utter_submit_flight_search
+    - action: action_search_flights
+    - action: utter_continue_search
+    - action: action_listen
 
 
 - story: Happy path hotel booking

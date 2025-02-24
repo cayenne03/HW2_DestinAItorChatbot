@@ -133,9 +133,6 @@ responses:
   utter_goodbye:
   - text: "Thanks for chatting! 🌴 Safe travels and remember, I'm here whenever you need travel & planning help or real-time recommendations! 🗺️ \n\nHave a great journey and enjoy! 🍹🍽️⛱️"
 
-  # utter_flights:
-  # - text: "FLIGHTS"
-
   utter_hotels:
   - text: "HOTELS"
 
@@ -167,6 +164,8 @@ responses:
   utter_submit_flight_search:
     - text: "Great! Let me search flights for {num_passengers} passenger(s) from {departure_city} to {arrival_city}, departing on {departure_date} and arriving on {return_date}."
 
+  utter_continue_search:
+    - text: "You can continue prompting me to explore hotels and activities in {arrival_city} or any other city."
 
 actions:
   - action_session_start
@@ -178,6 +177,7 @@ actions:
 
   - action_extract_flight_entities
   - validate_flight_booking_form
+  - action_search_flights
 
 session_config:
   session_expiration_time: 60

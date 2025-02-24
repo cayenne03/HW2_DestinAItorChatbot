@@ -13,6 +13,7 @@ from mylogger import get_logger
 from custom_models.flant5_classifier import FlanT5Classifier
 from custom_models.spacy_nlp_md import nlp
 from utils.apis.openai_client_api import OpenAIClient
+from utils.apis.amadeus_api import AmadeusAPI
 from utils.date_utils import parse_date_to_iso
 
 
@@ -22,6 +23,7 @@ logger = get_logger(__name__)
 logger.debug("Actions module loaded")
 
 openai_client = OpenAIClient(api_key=os.getenv('OPENAI_API_KEY'))
+amadeus = AmadeusAPI(client_id=os.getenv('AMADEUS_API_KEY'), client_secret=os.getenv('AMADEUS_API_SECRET'))
 
 class ActionSessionStart(Action):
     def name(self) -> Text:
@@ -320,7 +322,107 @@ class ActionExtractFlightEntities(Action):
             events.append(FollowupAction("flight_booking_form"))
         
         return events
-    
+
+
+class ActionSearchFlights(Action):
+    def name(self) -> Text:
+        return "action_search_flights"
+
+    def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]
+    ) -> List[Dict[Text, Any]]:
+
+        departure_city = tracker.get_slot('departure_city')
+        arrival_city = tracker.get_slot('arrival_city')
+        departure_date = tracker.get_slot('departure_date')
+        return_date = tracker.get_slot('return_date')
+        num_passengers = tracker.get_slot('num_passengers')
+
+        # convert to int if not already
+        try:
+            adults = int(num_passengers) if num_passengers else 1
+        except ValueError:
+            adults = 1
+
+        if not all([departure_city, arrival_city, departure_date, return_date]):
+            logger.info("Missing required information for flight search")
+            dispatcher.utter_message(text="Sorry, I need all flight details to search for flights.")
+            return []
+
+        try:
+            # get departure airports & arrival airports
+            departure_prompt = openai_client.create_airport_prompt(departure_city)
+            departure_data = openai_client.get_completion(departure_prompt)
+            departure_airports = departure_data['airports'][:2]
+
+            arrival_prompt = openai_client.create_airport_prompt(arrival_city)
+            arrival_data = openai_client.get_completion(arrival_prompt)
+            arrival_airports = arrival_data['airports'][:2]
+
+            dispatcher.utter_message(text=f"🔍 Searching flights from {departure_city} to {arrival_city} for {adults} passenger{'' if adults == 1 else 's'}...")
+
+            for dep_airport in departure_airports:
+                for arr_airport in arrival_airports:
+                    try:
+                        two_way_response = amadeus.search_flights(
+                            origin=dep_airport['IATA_CODE'],
+                            destination=arr_airport['IATA_CODE'],
+                            departure_date=departure_date,
+                            return_date=return_date,
+                            adults=adults
+                        )
+
+                        two_way_formatted = amadeus.parse_flight_offers(two_way_response, is_round_trip=True)
+
+                        if two_way_formatted:
+                            # header for this route
+                            route_msg = f"\n✈️ Route: <u>{dep_airport['name']}</u> ({dep_airport['IATA_CODE']}) 🔄 <u>{arr_airport['name']}</u> ({arr_airport['IATA_CODE']})"
+                            dispatcher.utter_message(text=route_msg)
+
+                            # Since the message already comes formatted, we don't need to reformat the lines,
+                            # just add the passengers info at the end
+                            for offer in two_way_formatted:
+                                # extract first line with price info
+                                price_line = offer.split('\n')[0]
+
+                                # add passenger count before "Price:"
+                                if "Price:" in price_line:
+                                    parts = price_line.split("Price:")
+                                    price_line = f"{parts[0]}({adults} passenger{'' if adults == 1 else 's'}) Price:<b>{parts[1]}</b>"
+
+                                    # rebuild offer with updated price line
+                                    offer_lines = offer.split('\n')
+                                    offer_lines[0] = price_line
+                                    offer = '\n'.join(offer_lines)
+
+                                # re-format the message with emojis & separator
+                                flights = offer.split('\n')
+                                if len(flights) >= 2:
+                                    message = (
+                                        f"🛫 Outbound: {flights[0]}\n"
+                                        f"🛬 Return: {flights[1]}\n"
+                                        f"{'_' * 40}"
+                                    )
+                                    dispatcher.utter_message(text=message)
+                                else:
+                                    dispatcher.utter_message(text=offer)
+                        else:
+                            dispatcher.utter_message(text=f"No flights found between <u>{dep_airport['name']}</u> ({dep_airport['IATA_CODE']}) 🔄 <u>{arr_airport['name']}</u> ({arr_airport['IATA_CODE']})")
+
+                    except Exception as e:
+                        logger.error(f"Error searching flights for {dep_airport['IATA_CODE']} 🔄 {arr_airport['IATA_CODE']}: {e}")
+                        dispatcher.utter_message(text=f"❌ Couldn't find flights from {dep_airport['name']} to {arr_airport['name']}")
+
+            return []
+
+        except Exception as e:
+            logger.error(f"Error in flight search: {e}")
+            dispatcher.utter_message(text="❌ Sorry, I encountered an error while searching for flights.")
+            return []
+
 
 class ValidateFlightBookingForm(FormValidationAction):
     def name(self) -> Text:

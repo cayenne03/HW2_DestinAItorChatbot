@@ -81,7 +81,7 @@ class AmadeusAPI:
             
             outbound_line = (
                 f"({departure_time}) "
-                f"{outbound['departure']['iataCode']} -> "
+                f"{outbound['departure']['iataCode']} ➡️ "
                 f"{outbound['arrival']['iataCode']} "
                 f"({arrival_time}), "
                 f"Duration: {itineraries[0]['duration'][2:-1].replace('H', 'h ')}m, "
@@ -100,7 +100,7 @@ class AmadeusAPI:
                 
                 return_line = (
                     f"({return_departure}) "
-                    f"{return_segment['departure']['iataCode']} -> "
+                    f"{return_segment['departure']['iataCode']} ➡️ "
                     f"{return_segment['arrival']['iataCode']} "
                     f"({return_arrival}), "
                     f"Duration: {itineraries[1]['duration'][2:-1].replace('H', 'h ')}m, "

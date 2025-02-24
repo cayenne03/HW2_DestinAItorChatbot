@@ -17,8 +17,10 @@ class OpenAIClient:
     def create_airport_prompt(city: str) -> str:
         return f'''You are a travel and aviation expert. 
 Return information about all major unique commercial airports in {city} in the exact JSON format below.
-Only include actively operating commercial airports.
-Return JSON only, no other text.
+Rules:
+- Only include actively operating commercial airports, not closed or under construction.
+- The "airports" field as an array of objects should be ordered by the most flight volume and importance for the given city FIRST.
+- Return JSON only, no other text.
 
 Required format:
 {{

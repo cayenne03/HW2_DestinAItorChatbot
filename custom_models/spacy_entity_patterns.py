@@ -33,7 +33,7 @@ def setup_entity_patterns(nlp):
             {"pattern": "return flight", "id": "round_trip"},
             {"pattern": "two way", "id": "round_trip"},
             {"pattern": "2 way", "id": "round_trip"},
-            {"pattern": "with return", "id": "round_trip"}
+            {"pattern": "with return", "id": "round_trip"},
         ],
         "LOCATION_INDICATOR": [
             # basic from/to
@@ -88,8 +88,21 @@ def setup_entity_patterns(nlp):
             {"pattern": [{"LIKE_NUM": True}, {"LOWER": "passengers"}]},
             {"pattern": [{"LIKE_NUM": True}, {"LOWER": "people"}]},
             {"pattern": [{"LIKE_NUM": True}, {"LOWER": "persons"}]},
-            {"pattern": [{"LOWER": "for"}, {"LIKE_NUM": True}]}
-        ]
+            {"pattern": [{"LOWER": "for"}, {"LIKE_NUM": True}]},
+        ],
+        # add some new DATE patterns
+        "DATE": [
+            {"pattern": [{"SHAPE": "dddd-dd-dd"}], "id": "iso_date"},
+            {"pattern": [{"SHAPE": "dd/dd/dddd"}], "id": "slash_date"},
+            {"pattern": [{"SHAPE": "dd-dd-dddd"}], "id": "dash_date"},
+            {"pattern": [
+                {"IS_DIGIT": True, "LENGTH": 4},
+                {"TEXT": "-"},
+                {"IS_DIGIT": True, "LENGTH": 2},
+                {"TEXT": "-"},
+                {"IS_DIGIT": True, "LENGTH": 2}
+            ], "id": "iso_date_explicit"}
+        ],
     }
 
     # convert patterns to ruler format

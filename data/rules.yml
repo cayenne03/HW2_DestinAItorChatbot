@@ -46,6 +46,8 @@ rules:
     - slot_was_set:
         - requested_slot: null
     - action: utter_submit_flight_search
+    - action: action_search_flights
+    - action: utter_continue_search
     # ready for next input, new intent etc.
     - action: action_listen
 
