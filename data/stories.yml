@@ -7,7 +7,7 @@ stories:
   - action: utter_default
 
 
-- story: Happy path flight booking
+- story: Happy path flight searching
   steps:
     - intent: find_compare_flights
       entities:
@@ -17,8 +17,8 @@ stories:
           role: arrival
     - action: action_validate_intent
     - action: action_extract_flight_entities
-    - action: flight_booking_form
-    - active_loop: flight_booking_form
+    - action: flight_searching_form
+    - active_loop: flight_searching_form
     - slot_was_set:
         - departure_city: "New York"
         - arrival_city: "London"
@@ -37,19 +37,19 @@ stories:
     - action: action_listen
 
 
-- story: Happy path hotel booking
+- story: Happy path hotel suggestions
   steps:
     - intent: suggest_hotels
     - action: action_validate_intent
     - action: utter_hotels
 
-- story: Happy path activities booking
+- story: Happy path activities searching
   steps:
     - intent: explore_activities_places
     - action: action_validate_intent
     - action: utter_activities
 
-- story: Happy path around me booking
+- story: Happy path around me
   steps:
     - intent: around_me
     - action: action_validate_intent

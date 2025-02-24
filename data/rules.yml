@@ -28,20 +28,20 @@ rules:
 
 ##### FLIGHT SEARCH #####
 
-- rule: Validate and activate flight booking form
+- rule: Validate and activate flight searching form
   steps:
     - intent: find_compare_flights
     - action: action_validate_intent
     - action: action_extract_flight_entities
-    - action: flight_booking_form
-    - active_loop: flight_booking_form
+    - action: flight_searching_form
+    - active_loop: flight_searching_form
 
 
-- rule: Submit flight booking form
+- rule: Submit flight searching form
   condition:
-    - active_loop: flight_booking_form
+    - active_loop: flight_searching_form
   steps:
-    - action: flight_booking_form
+    - action: flight_searching_form
     - active_loop: null
     - slot_was_set:
         - requested_slot: null
@@ -52,9 +52,9 @@ rules:
     - action: action_listen
 
 
-- rule: Handle form input during flight booking
+- rule: Handle form input during flight searching
   condition:
-    - active_loop: flight_booking_form
+    - active_loop: flight_searching_form
   steps:
-    - action: flight_booking_form
-    - active_loop: flight_booking_form
+    - action: flight_searching_form
+    - active_loop: flight_searching_form

@@ -26,7 +26,7 @@ slots:
       role: departure
     - type: from_text
       conditions:
-      - active_loop: flight_booking_form
+      - active_loop: flight_searching_form
         requested_slot: departure_city
 
   arrival_city:
@@ -38,7 +38,7 @@ slots:
       role: arrival
     - type: from_text
       conditions:
-      - active_loop: flight_booking_form
+      - active_loop: flight_searching_form
         requested_slot: arrival_city
 
   departure_date:
@@ -50,7 +50,7 @@ slots:
       role: departure
     - type: from_text
       conditions:
-      - active_loop: flight_booking_form
+      - active_loop: flight_searching_form
         requested_slot: departure_date
 
   return_date:
@@ -62,7 +62,7 @@ slots:
       role: return
     - type: from_text
       conditions:
-      - active_loop: flight_booking_form
+      - active_loop: flight_searching_form
         requested_slot: return_date
 
   num_passengers:
@@ -73,11 +73,11 @@ slots:
       entity: number
     - type: from_text
       conditions:
-      - active_loop: flight_booking_form
+      - active_loop: flight_searching_form
         requested_slot: num_passengers
 
 forms:
-  flight_booking_form:
+  flight_searching_form:
     required_slots:
       - departure_city
       - arrival_city
@@ -176,7 +176,7 @@ actions:
   # - utter_around_me
 
   - action_extract_flight_entities
-  - validate_flight_booking_form
+  - validate_flight_searching_form
   - action_search_flights
 
 session_config:

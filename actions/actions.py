@@ -242,7 +242,7 @@ class ActionExtractFlightEntities(Action):
     # extraction stuff logic can just be an LLM call 🤷‍♀️
     def extract_entities(self, text: str, domain: Dict[Text, Any]) -> Dict[str, Any]:
         forms = domain.get('forms', {})
-        required_slots = forms.get('flight_booking_form', {}).get('required_slots', [])
+        required_slots = forms.get('flight_searching_form', {}).get('required_slots', [])
 
         try:
             doc = nlp(text)
@@ -288,7 +288,7 @@ class ActionExtractFlightEntities(Action):
         latest_message = tracker.latest_message.get('text')
         events = []
         forms = domain.get('forms', {})
-        required_slots = forms.get('flight_booking_form', {}).get('required_slots', [])
+        required_slots = forms.get('flight_searching_form', {}).get('required_slots', [])
         logger.info(f"Required slots: {required_slots}")
 
         # reset all slots at the start
@@ -319,7 +319,7 @@ class ActionExtractFlightEntities(Action):
         
         if missing_slots:
             logger.info("Activating form to collect missing slots")
-            events.append(FollowupAction("flight_booking_form"))
+            events.append(FollowupAction("flight_searching_form"))
         
         return events
 
@@ -424,9 +424,9 @@ class ActionSearchFlights(Action):
             return []
 
 
-class ValidateFlightBookingForm(FormValidationAction):
+class ValidateFlightSearchingForm(FormValidationAction):
     def name(self) -> Text:
-        return "validate_flight_booking_form"
+        return "validate_flight_searching_form"
 
 
     def _validate_city(
