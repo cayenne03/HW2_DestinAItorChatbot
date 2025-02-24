@@ -310,7 +310,7 @@ class ActionExtractFlightEntities(Action):
             # if extraction fails, just reset slots and return
             return events
 
-        # Check missing slots based on extracted entities
+        # check missing slots based on extracted entities
         missing_slots = [slot for slot in required_slots
                     if slot not in extracted_entities or extracted_entities[slot] is None]
         logger.info(f"Missing slots: {missing_slots}")
@@ -347,7 +347,7 @@ class ValidateFlightBookingForm(FormValidationAction):
             logger.info(f"{formatted_value} is not recognized as a GPE valid city ({slot_name})")
             return None
 
-        # Check for duplicate cities
+        # check for duplicate cities
         other_slot = 'arrival_city' if slot_name == 'departure_city' else 'departure_city'
         other_city = tracker.get_slot(other_slot)
         if other_city and other_city.lower() == formatted_value.lower():
@@ -368,7 +368,7 @@ class ValidateFlightBookingForm(FormValidationAction):
         """Validate departure_city value."""
         logger.info(f"Validating departure_city with value: {slot_value}")
 
-        # First check existing value
+        # 1st check existing value
         current_value = tracker.get_slot('departure_city')
         if current_value:
             logger.info(f"Found existing departure_city: {current_value}")
@@ -380,7 +380,7 @@ class ValidateFlightBookingForm(FormValidationAction):
             dispatcher.utter_message(text="I need a valid city name for departure.")
             return {"departure_city": None}
 
-        # Then validate new input
+        # then validate new input
         if slot_value:
             validated_city = self._validate_city(slot_value, "departure_city", dispatcher, tracker)
             if validated_city:
@@ -402,7 +402,7 @@ class ValidateFlightBookingForm(FormValidationAction):
         """Validate arrival_city value."""
         logger.info(f"Validating arrival_city with value: {slot_value}")
 
-        # First check existing value
+        # 1st check existing value
         current_value = tracker.get_slot('arrival_city')
         if current_value:
             logger.info(f"Found existing arrival_city: {current_value}")
@@ -414,7 +414,7 @@ class ValidateFlightBookingForm(FormValidationAction):
             dispatcher.utter_message(text="I need a valid city name for arrival.")
             return {"arrival_city": None}
 
-        # Then validate new input
+        # then validate new input
         if slot_value:
             validated_city = self._validate_city(slot_value, "arrival_city", dispatcher, tracker)
             if validated_city:
@@ -441,24 +441,24 @@ class ValidateFlightBookingForm(FormValidationAction):
             return None
 
         try:
-            # First try to parse to ISO
+            # 1st try to parse to ISO
             parsed_date_str = parse_date_to_iso(str(date_value))
             if not parsed_date_str:  # parse_date_to_iso returns None on failure
                 logger.info(f"Failed to parse date: {date_value}")
                 dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
                 return None
 
-            # Convert to datetime for comparisons
+            # convert to datetime for comparisons
             parsed_date = datetime.strptime(parsed_date_str, "%Y-%m-%d").date()
 
-            # Then check if it's a DATE using spacy
+            # then check if it's a DATE using spacy
             doc = nlp(str(date_value))
             if not any(ent.label_ == "DATE" for ent in doc.ents):
                 logger.info(f"{date_value} is not recognized as a valid date ({slot_name})")
                 dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
                 return None
 
-            # Check date constraints
+            # check date constraints
             departure_date = tracker.get_slot('departure_date')
             return_date = tracker.get_slot('return_date')
 
@@ -494,7 +494,7 @@ class ValidateFlightBookingForm(FormValidationAction):
         """Validate departure_date value."""
         logger.info(f"Validating departure_date with value: {slot_value}")
 
-        # First check existing value
+        # 1st check existing value
         current_value = tracker.get_slot('departure_date')
         if current_value:
             logger.info(f"Found existing departure_date: {current_value}")
@@ -505,7 +505,7 @@ class ValidateFlightBookingForm(FormValidationAction):
             logger.info("Invalid existing departure_date")
             return {"departure_date": None}
 
-        # Then validate new input
+        # then validate new input
         if slot_value:
             validated_date = self._validate_date(slot_value, "departure_date", dispatcher, tracker)
             if validated_date:
@@ -526,7 +526,7 @@ class ValidateFlightBookingForm(FormValidationAction):
         """Validate return_date value."""
         logger.info(f"Validating return_date with value: {slot_value}")
 
-        # First check existing value
+        # 1st check existing value
         current_value = tracker.get_slot('return_date')
         if current_value:
             logger.info(f"Found existing return_date: {current_value}")
@@ -537,7 +537,7 @@ class ValidateFlightBookingForm(FormValidationAction):
             logger.info("Invalid existing return_date")
             return {"return_date": None}
 
-        # Then validate new input
+        # then validate new input
         if slot_value:
             validated_date = self._validate_date(slot_value, "return_date", dispatcher, tracker)
             if validated_date:
@@ -583,7 +583,7 @@ class ValidateFlightBookingForm(FormValidationAction):
         """Validate num_passengers value."""
         logger.info(f"Validating num_passengers with value: {slot_value}")
 
-        # First check existing value
+        # 1st check existing value
         current_value = tracker.get_slot('num_passengers')
         if current_value:
             logger.info(f"Found existing num_passengers: {current_value}")
@@ -594,7 +594,7 @@ class ValidateFlightBookingForm(FormValidationAction):
             logger.info("Invalid existing num_passengers")
             return {"num_passengers": None}
 
-        # Then validate new input
+        # then validate new input
         if slot_value:
             validated_num = self._validate_passengers(slot_value, "num_passengers", dispatcher)
             if validated_num:
