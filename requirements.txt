@@ -2,12 +2,13 @@
 
 rasa==3.6.21
 python-dotenv==1.0.1
-mysql-connector-python==9.2.0
-Flask==3.1.0
+mysql-connector-python==9.2.0  # not used
+Flask==3.1.0     # not used 
 openai==1.62.0
-geocoder==1.38.1
-cohere==5.13.12
+geocoder==1.38.1 # not used
+cohere==5.13.12  # not used
 gradio==5.16.0
 transformers==4.49.0
 torch==2.6.0
 spacy==3.8.4
+sentence-transformers==3.4.1
