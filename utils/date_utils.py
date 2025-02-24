@@ -151,6 +151,7 @@ def parse_date_to_iso(date_text: str) -> str:
 #     "15 next month",
 #     "next month",
 #     "the 31st",
+#     "1st of March",
 #     None
 # ]
 

@@ -1,6 +1,7 @@
 from typing import Any, Text, Dict, List, Optional, Tuple
 import os
 import json
+from datetime import datetime
 
 from dotenv import load_dotenv
 from rasa_sdk import Action, Tracker, FormValidationAction
@@ -236,7 +237,7 @@ class ActionExtractFlightEntities(Action):
                             pass
         return None
 
-    # TODO: extraction stuff logic could just be an LLM call 🤷‍♀️
+    # extraction stuff logic can just be an LLM call 🤷‍♀️
     def extract_entities(self, text: str, domain: Dict[Text, Any]) -> Dict[str, Any]:
         forms = domain.get('forms', {})
         required_slots = forms.get('flight_booking_form', {}).get('required_slots', [])
@@ -325,6 +326,38 @@ class ValidateFlightBookingForm(FormValidationAction):
     def name(self) -> Text:
         return "validate_flight_booking_form"
 
+
+    def _validate_city(
+        self,
+        city: Text,
+        slot_name: Text,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker
+    ) -> Optional[str]:
+        """Validate and format city name.
+        Returns formatted city name if valid, None if invalid."""
+        if not city or not city.strip():
+            logger.info(f"Empty {slot_name} value")
+            return None
+
+        formatted_value = " ".join(word.capitalize() for word in city.strip().split())
+        doc = nlp(formatted_value)
+
+        if not any(ent.label_ == "GPE" for ent in doc.ents):
+            logger.info(f"{formatted_value} is not recognized as a GPE valid city ({slot_name})")
+            return None
+
+        # Check for duplicate cities
+        other_slot = 'arrival_city' if slot_name == 'departure_city' else 'departure_city'
+        other_city = tracker.get_slot(other_slot)
+        if other_city and other_city.lower() == formatted_value.lower():
+            logger.info(f"Duplicate cities: {formatted_value} already set as {other_slot}")
+            dispatcher.utter_message(text="The departure and arrival cities cannot be the same.")
+            return None
+
+        return formatted_value
+
+
     def validate_departure_city(
         self,
         slot_value: Any,
@@ -334,22 +367,30 @@ class ValidateFlightBookingForm(FormValidationAction):
     ) -> Dict[Text, Any]:
         """Validate departure_city value."""
         logger.info(f"Validating departure_city with value: {slot_value}")
+
+        # First check existing value
         current_value = tracker.get_slot('departure_city')
-        logger.info(f"Current departure_city value: {current_value}")
-
         if current_value:
-            logger.info(f"Keeping existing departure_city: {current_value}")
-            return {"departure_city": current_value}
+            logger.info(f"Found existing departure_city: {current_value}")
+            validated_city = self._validate_city(current_value, "departure_city", dispatcher, tracker)
+            if validated_city:
+                logger.info(f"Keeping valid existing departure_city: {validated_city}")
+                return {"departure_city": validated_city}
+            logger.info("Invalid existing departure_city")
+            dispatcher.utter_message(text="I need a valid city name for departure.")
+            return {"departure_city": None}
 
-        latest_message = tracker.latest_message.get('text')
-        logger.info(f"Latest message for departure_city: {latest_message}")
+        # Then validate new input
+        if slot_value:
+            validated_city = self._validate_city(slot_value, "departure_city", dispatcher, tracker)
+            if validated_city:
+                logger.info(f"Setting validated departure_city: {validated_city}")
+                return {"departure_city": validated_city}
+            logger.info("Invalid departure_city input")
+            dispatcher.utter_message(text="Please provide a valid city name for departure.")
         
-        if latest_message and slot_value:
-            logger.info(f"Setting departure_city from text: {slot_value}")
-            return {"departure_city": slot_value}
-        
-        logger.info("No valid departure_city found")
         return {"departure_city": None}
+
 
     def validate_arrival_city(
         self,
@@ -360,22 +401,88 @@ class ValidateFlightBookingForm(FormValidationAction):
     ) -> Dict[Text, Any]:
         """Validate arrival_city value."""
         logger.info(f"Validating arrival_city with value: {slot_value}")
+
+        # First check existing value
         current_value = tracker.get_slot('arrival_city')
-        logger.info(f"Current arrival_city value: {current_value}")
-
         if current_value:
-            logger.info(f"Keeping existing arrival_city: {current_value}")
-            return {"arrival_city": current_value}
+            logger.info(f"Found existing arrival_city: {current_value}")
+            validated_city = self._validate_city(current_value, "arrival_city", dispatcher, tracker)
+            if validated_city:
+                logger.info(f"Keeping valid existing arrival_city: {validated_city}")
+                return {"arrival_city": validated_city}
+            logger.info("Invalid existing arrival_city")
+            dispatcher.utter_message(text="I need a valid city name for arrival.")
+            return {"arrival_city": None}
 
-        latest_message = tracker.latest_message.get('text')
-        logger.info(f"Latest message for arrival_city: {latest_message}")
+        # Then validate new input
+        if slot_value:
+            validated_city = self._validate_city(slot_value, "arrival_city", dispatcher, tracker)
+            if validated_city:
+                logger.info(f"Setting validated arrival_city: {validated_city}")
+                return {"arrival_city": validated_city}
+            logger.info("Invalid arrival_city input")
+            dispatcher.utter_message(text="Please provide a valid city name for arrival.")
         
-        if latest_message and slot_value:
-            logger.info(f"Setting arrival_city from text: {slot_value}")
-            return {"arrival_city": slot_value}
-        
-        logger.info("No valid arrival_city found")
         return {"arrival_city": None}
+
+
+    def _validate_date(
+        self,
+        date_value: Any,
+        slot_name: Text,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker
+    ) -> Optional[str]:
+        """Validate and format date.
+        Returns ISO formatted date string if valid, None if invalid."""
+
+        if not date_value or not str(date_value).strip():
+            logger.info(f"Empty {slot_name} value")
+            return None
+
+        try:
+            # First try to parse to ISO
+            parsed_date_str = parse_date_to_iso(str(date_value))
+            if not parsed_date_str:  # parse_date_to_iso returns None on failure
+                logger.info(f"Failed to parse date: {date_value}")
+                dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
+                return None
+
+            # Convert to datetime for comparisons
+            parsed_date = datetime.strptime(parsed_date_str, "%Y-%m-%d").date()
+
+            # Then check if it's a DATE using spacy
+            doc = nlp(str(date_value))
+            if not any(ent.label_ == "DATE" for ent in doc.ents):
+                logger.info(f"{date_value} is not recognized as a valid date ({slot_name})")
+                dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
+                return None
+
+            # Check date constraints
+            departure_date = tracker.get_slot('departure_date')
+            return_date = tracker.get_slot('return_date')
+
+            if departure_date:
+                departure_date = datetime.strptime(parse_date_to_iso(departure_date), "%Y-%m-%d").date()
+            if return_date:
+                return_date = datetime.strptime(parse_date_to_iso(return_date), "%Y-%m-%d").date()
+
+            if slot_name == 'departure_date' and return_date and parsed_date > return_date:
+                logger.info(f"Departure date {parsed_date_str} is after return date {return_date}")
+                dispatcher.utter_message(text="Departure date must be before or on the return date")
+                return None
+            elif slot_name == 'return_date' and departure_date and parsed_date < departure_date:
+                logger.info(f"Return date {parsed_date_str} is before departure date {departure_date}")
+                dispatcher.utter_message(text="Return date must be after or on the departure date")
+                return None
+
+            return parsed_date_str
+
+        except Exception as e:
+            logger.info(f"Failed to parse date: {e}")
+            dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
+            return None
+
 
     def validate_departure_date(
         self,
@@ -386,27 +493,28 @@ class ValidateFlightBookingForm(FormValidationAction):
     ) -> Dict[Text, Any]:
         """Validate departure_date value."""
         logger.info(f"Validating departure_date with value: {slot_value}")
+
+        # First check existing value
         current_value = tracker.get_slot('departure_date')
-        logger.info(f"Current departure_date value: {current_value}")
-
         if current_value:
-            logger.info(f"Keeping existing departure_date: {current_value}")
-            return {"departure_date": current_value}
+            logger.info(f"Found existing departure_date: {current_value}")
+            validated_date = self._validate_date(current_value, "departure_date", dispatcher, tracker)
+            if validated_date:
+                logger.info(f"Keeping valid existing departure_date: {validated_date}")
+                return {"departure_date": validated_date}
+            logger.info("Invalid existing departure_date")
+            return {"departure_date": None}
 
-        latest_message = tracker.latest_message.get('text')
-        logger.info(f"Latest message for departure_date: {latest_message}")
+        # Then validate new input
+        if slot_value:
+            validated_date = self._validate_date(slot_value, "departure_date", dispatcher, tracker)
+            if validated_date:
+                logger.info(f"Setting validated departure_date: {validated_date}")
+                return {"departure_date": validated_date}
+            logger.info("Invalid departure_date input")
         
-        if slot_value and slot_value != latest_message:
-            try:
-                parsed_date = parse_date_to_iso(slot_value)
-                logger.info(f"Setting departure_date: {parsed_date}")
-                return {"departure_date": parsed_date}
-            except:
-                logger.info("Failed to parse departure date")
-                dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
-        
-        logger.info("No valid departure_date found")
         return {"departure_date": None}
+
 
     def validate_return_date(
         self,
@@ -417,35 +525,53 @@ class ValidateFlightBookingForm(FormValidationAction):
     ) -> Dict[Text, Any]:
         """Validate return_date value."""
         logger.info(f"Validating return_date with value: {slot_value}")
+
+        # First check existing value
         current_value = tracker.get_slot('return_date')
-        logger.info(f"Current return_date value: {current_value}")
-
         if current_value:
-            logger.info(f"Keeping existing return_date: {current_value}")
-            return {"return_date": current_value}
+            logger.info(f"Found existing return_date: {current_value}")
+            validated_date = self._validate_date(current_value, "return_date", dispatcher, tracker)
+            if validated_date:
+                logger.info(f"Keeping valid existing return_date: {validated_date}")
+                return {"return_date": validated_date}
+            logger.info("Invalid existing return_date")
+            return {"return_date": None}
 
-        latest_message = tracker.latest_message.get('text')
-        logger.info(f"Latest message for return_date: {latest_message}")
+        # Then validate new input
+        if slot_value:
+            validated_date = self._validate_date(slot_value, "return_date", dispatcher, tracker)
+            if validated_date:
+                logger.info(f"Setting validated return_date: {validated_date}")
+                return {"return_date": validated_date}
+            logger.info("Invalid return_date input")
         
-        if slot_value and slot_value != latest_message:
-            try:
-                parsed_date = parse_date_to_iso(slot_value)
-                departure_date = tracker.get_slot('departure_date')
-                logger.info(f"Checking return_date {parsed_date} against departure_date {departure_date}")
-                
-                if departure_date and parsed_date < departure_date:
-                    logger.info("Return date before departure date")
-                    dispatcher.utter_message(text="Return date must be after departure date")
-                    return {"return_date": None}
-                    
-                logger.info(f"Setting return_date: {parsed_date}")
-                return {"return_date": parsed_date}
-            except:
-                logger.info("Failed to parse return date")
-                dispatcher.utter_message(text="Please provide a valid date (e.g., YYYY-MM-DD or 'next Friday')")
-        
-        logger.info("No valid return_date found")
         return {"return_date": None}
+
+
+    def _validate_passengers(
+        self,
+        value: Any,
+        slot_name: Text,
+        dispatcher: CollectingDispatcher
+    ) -> Optional[int]:
+        """Validate passenger number.
+        Returns validated integer if valid, None if invalid."""
+        if not value:
+            logger.info("Empty passenger value")
+            return None
+
+        try:
+            num = int(str(value).strip())
+            if not 0 < num <= 5:
+                logger.info(f"Passenger number {num} outside valid range (1-5)")
+                dispatcher.utter_message(text="Number of passengers must be between 1 and 5")
+                return None
+            return num
+        except ValueError:
+            logger.info(f"Failed to parse passenger number: {value}")
+            dispatcher.utter_message(text="Please provide a valid number of passengers (1-5)")
+            return None
+
 
     def validate_num_passengers(
         self,
@@ -456,28 +582,33 @@ class ValidateFlightBookingForm(FormValidationAction):
     ) -> Dict[Text, Any]:
         """Validate num_passengers value."""
         logger.info(f"Validating num_passengers with value: {slot_value}")
+
+        # First check existing value
         current_value = tracker.get_slot('num_passengers')
-        logger.info(f"Current num_passengers value: {current_value}")
-
         if current_value:
-            logger.info(f"Keeping existing num_passengers: {current_value}")
-            return {"num_passengers": current_value}
+            logger.info(f"Found existing num_passengers: {current_value}")
+            validated_num = self._validate_passengers(current_value, "num_passengers", dispatcher)
+            if validated_num:
+                logger.info(f"Keeping valid existing num_passengers: {validated_num}")
+                return {"num_passengers": validated_num}
+            logger.info("Invalid existing num_passengers")
+            return {"num_passengers": None}
 
-        latest_message = tracker.latest_message.get('text')
-        logger.info(f"Latest message for num_passengers: {latest_message}")
-        
-        if slot_value and slot_value != latest_message:
-            try:
-                num = int(slot_value)
-                if num > 0:
-                    logger.info(f"Setting num_passengers: {num}")
-                    return {"num_passengers": str(num)}
-                else:
-                    logger.info("Invalid number of passengers (<=0)")
-                    dispatcher.utter_message(text="Number of passengers must be greater than 0")
-            except ValueError:
-                logger.info("Failed to parse number of passengers")
-                dispatcher.utter_message(text="Please provide a valid number of passengers")
-        
-        logger.info("No valid num_passengers found")
+        # Then validate new input
+        if slot_value:
+            validated_num = self._validate_passengers(slot_value, "num_passengers", dispatcher)
+            if validated_num:
+                logger.info(f"Setting validated num_passengers: {validated_num}")
+                return {"num_passengers": validated_num}
+            logger.info("Invalid num_passengers input")
+
         return {"num_passengers": None}
+
+
+###########################################################
+# TODO:
+#
+# 1) Remove validators away from here
+# 2) Turn to extract_* functions for speed instead of LLM
+# 3) Use a DB for frequent queries (airports, cities, etc.)
+###########################################################

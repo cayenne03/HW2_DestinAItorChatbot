@@ -44,9 +44,10 @@ Please extract the following information if it exists.
 
 Rules:
 - For dates, use the format YYYY-MM-DD, while today's date is {today}.
-- For cities be sure to write the official city name, eg. if "big Apple" is mentioned write New York
-if "capital of France" is mentioned write Paris.
-- If a field is not mentioned, set its value to `null`.
+- For cities be sure that: 1) it is a valid city name in the world and\n
+2) write the official city name, eg. if "big Apple" is mentioned write New York if "capital of France" is mentioned write Paris.
+3) if a country is given, write the city name of the capital of that country, eg. if "England" is mentioned write London.
+- If a field is not mentioned or not recognized, set its value to `null`.
 - Return JSON only, no other text.
 
 Required format:

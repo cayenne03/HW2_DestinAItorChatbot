@@ -68,7 +68,7 @@ nlu:
     - help me choose an option
     - show me the main menu
     - what choices do I have
-    - options I have?
+    - options ?
     - what's my choices
 
 - intent: nlu_fallback
@@ -109,6 +109,7 @@ nlu:
     - I need a place to stay in Paris
     - recommend accommodations in Athens
     - help me find a hotel
+    - somewhere to sleep in Napoli
     - hotel booking please
     - find accommodations for my trip
     - where can I stay in Berlin

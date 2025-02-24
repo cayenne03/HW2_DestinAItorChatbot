@@ -143,7 +143,7 @@ responses:
   - text: "ACTIVITIES"
 
   utter_around_me:
-  - text: "AROUND ME"
+  - text: "AROUND ME (🚧 👷 **UNDER CONSTRUCTION** 🏗️ 🛠️)"
 
 
   utter_ask_departure_city:
@@ -165,7 +165,7 @@ responses:
     - text: "For how many passengers?"
 
   utter_submit_flight_search:
-    - text: "Great! Let me search flights for {num_passengers} passenger(s) from {departure_city} to {arrival_city}, departing on {departure_date}."
+    - text: "Great! Let me search flights for {num_passengers} passenger(s) from {departure_city} to {arrival_city}, departing on {departure_date} and arriving on {return_date}."
 
 
 actions:
