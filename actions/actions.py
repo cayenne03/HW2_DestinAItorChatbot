@@ -460,10 +460,15 @@ class ActionExtractExploreEntities(Action):
             # construct explore_city_text based on available information
             explore_city_text = None
 
+            # TODO: Revisit this logic again....
             if transformer_city and first_org_fac:
                 # if we have both city from transformer and facility from spaCy
                 explore_city_text = f"in {transformer_city} around {first_org_fac}"
-                logger.info(f"1. Explore city text: {explore_city_text}")
+                logger.info(f"1A. Explore city text: {explore_city_text}")
+            elif transformer_city and first_gpe_loc:
+                # if we have both city from transformer and location from spaCy
+                explore_city_text = f"in {first_gpe_loc}"
+                logger.info(f"1B. Explore city text: {explore_city_text}")
             elif first_gpe_loc and first_org_fac:
                 # if we have both location from spaCy and organization/facility
                 explore_city_text = f"in {first_gpe_loc} around {first_org_fac}"
@@ -483,8 +488,10 @@ class ActionExtractExploreEntities(Action):
 
             # only set the slot if we actually found an entity
             if "explore_city" in required_slots and explore_city_text is not None:
-                logger.info(f"Setting slot explore_city = {explore_city_text}")
-                events.append(SlotSet("explore_city", explore_city_text))
+                # logger.info(f"Setting slot explore_city = {explore_city_text}")
+                # events.append(SlotSet("explore_city", explore_city_text))
+                logger.info(f"Setting slot explore_city = {latest_message}")
+                events.append(SlotSet("explore_city", latest_message))
 
             food_or_not_text = None
             prompt = openai_client.create_food_detection_prompt(latest_message)

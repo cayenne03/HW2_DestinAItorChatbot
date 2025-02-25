@@ -127,14 +127,17 @@ nlu:
   examples: |
     - help me explore museums in Paris
     - suggest attractions in Rome
-    - what can I do in Athens
+    - what 1 day trip can I do in Athens
+    - suggest me a city tour
     - recommend local places to visit
     - find activities in the city
     - tell me about tourist spots in Barcelona
     - where can I eat sushi in Tokyo
+    - mexican restaurant in Paris
     - show me places to visit in Madrid
     - what attractions are in Berlin
     - find local activities
+    - propose me museums to visit in London
     - number three
     - third option please
     - I choose option 3

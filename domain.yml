@@ -214,7 +214,7 @@ responses:
   ##### EXPLORE ACTIVITIES & PLACES #####
 
   utter_ask_explore_city:
-    - text: "Which city would you like to explore for activities, restaurants, and places?"
+    - text: "**Which** city would you like to explore and for **what** activity? (restaurants, museums, places, attractions, tours, etc.)"
 
   utter_ask_food_or_not:
     - text: "Describe shortly what kind of activities are you looking for? (food, restaurants, museums, places, attractions, tours, etc.)"
