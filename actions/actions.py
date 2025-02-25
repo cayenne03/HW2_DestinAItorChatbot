@@ -71,7 +71,7 @@ class ActionValidateIntent(Action):
         rasa_intent = tracker.latest_message.get('intent').get('name')
         rasa_confidence = tracker.latest_message.get('intent').get('confidence', 0.0)
 
-        intents_to_validate = ['find_compare_flights', 'suggest_hotels', 'explore_activities_places', 'around_me']
+        intents_to_validate = ['find_compare_flights', 'suggest_hotels', 'explore_activities_places']
         if rasa_intent not in intents_to_validate:
             return []
 

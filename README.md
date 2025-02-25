@@ -1,3 +1,5 @@
+# (OBSOLETE)! THIS FILE NEEDS TO BE UPDATED (See DestinAItor_VisualPresentation.png)
+
 # 🌍 DestinAItor - Your AI Travel Companion ✈️  
 
 Welcome to **DestinAItor**, an intelligent travel assistant built with **RASA**! 🚀  
