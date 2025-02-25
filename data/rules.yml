@@ -80,7 +80,7 @@ rules:
     - slot_was_set:
         - requested_slot: null
     - action: utter_submit_hotel_search
-    # - action: action_search_hotels
+    - action: action_search_hotels
     - action: action_continue_prompt_search
     - action: action_listen
 

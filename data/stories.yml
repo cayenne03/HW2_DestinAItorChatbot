@@ -6,6 +6,7 @@ stories:
   - intent: nlu_fallback
   - action: utter_default
 
+#### FLIGHT SEARCHING ####
 
 - story: Happy path flight searching
   steps:
@@ -37,6 +38,8 @@ stories:
     - action: action_listen
 
 
+#### HOTEL SEARCHING ####
+
 - story: Happy path hotel searching
   steps:
     - intent: suggest_hotels
@@ -52,7 +55,7 @@ stories:
     - slot_was_set:
         - requested_slot: null
     - action: utter_submit_hotel_search
-    # - action: action_search_hotels
+    - action: action_search_hotels
     - action: action_continue_prompt_search
     - action: action_listen
 
@@ -63,8 +66,8 @@ stories:
     - action: action_validate_intent
     - action: utter_activities
 
-- story: Happy path around me
-  steps:
-    - intent: around_me
-    - action: action_validate_intent
-    - action: utter_around_me
+# - story: Happy path around me
+#   steps:
+#     - intent: around_me
+#     - action: action_validate_intent
+#     - action: utter_around_me

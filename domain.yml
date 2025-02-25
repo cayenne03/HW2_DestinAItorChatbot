@@ -8,7 +8,7 @@ intents:
   - find_compare_flights
   - suggest_hotels
   - explore_activities_places
-  - around_me
+  # - around_me
 
 entities:
   - option
@@ -111,7 +111,7 @@ responses:
 
       ✈️ **Find & Compare Flights**\n
           • Search and compare flight options\n
-          • Get details for round-trip or one-way flights\n
+          • Get details for round-trip flights\n
 
       🏨 **Suggest Hotels**\n
           • Discover hotels that match your style\n
@@ -121,18 +121,13 @@ responses:
           • Local restaurants & cuisine recommendations 🍽️\n
           • Must-visit attractions 🏖️🏛️\n
           • Museums, tours, and cultural spots 🖼️\n
-          • Outdoor & indoor activities 🎢\n
-
-      📍 **Around Me Now!**\n
-          • Discover hidden gems near your current location\n
-          • Immediate dining options and local activities\n\n
+          • Outdoor & indoor activities 🎢\n\n
 
       🚀 **Reply by writing like below**:\n
        - I want to book a flight to London next week\n
        - Suggest me a hotel in Rome\n
        - Help me explore museums in Paris\n
        - Where to eat sushi in Athens\n
-       - Show me what restaurants are nearby\n
 
       So how can I help you today? 😊"
     buttons:
@@ -142,8 +137,8 @@ responses:
         payload: "/hotels"
       - title: "Activities"
         payload: "/activities"
-      - title: "Around Me"
-        payload: "/around_me"
+      # - title: "Around Me"
+      #   payload: "/around_me"
 
   utter_default:
   - text: "I didn't quite catch that. Please choose an option or type 'menu' to see the options again."
@@ -154,8 +149,8 @@ responses:
   utter_activities:
   - text: "ACTIVITIES"
 
-  utter_around_me:
-  - text: "AROUND ME (🚧 👷 **UNDER CONSTRUCTION** 🏗️ 🛠️)"
+  # utter_around_me:
+  # - text: "AROUND ME (🚧 👷 **UNDER CONSTRUCTION** 🏗️ 🛠️)"
 
 
   utter_ask_departure_city:
@@ -187,7 +182,7 @@ responses:
     - text: "Which city would you like to search hotels for? You can also use broader city areas."
 
   utter_submit_hotel_search:
-    - text: "Great! Let me search for hotels {hotel_city}."
+    - text: "Great! Let me search for hotels in your selected area!"
 
 
 actions:
@@ -204,8 +199,23 @@ actions:
   - action_continue_prompt_search
 
   - action_extract_hotel_entities
-  # - action_search_hotels
+  # - validate_hotel_searching_form
+  - action_search_hotels
 
 session_config:
   session_expiration_time: 60
   carry_over_slots_to_new_session: true
+
+
+
+# 📍 **Around Me Now!**\n
+#     • Discover hidden gems near your current location\n
+#     • Immediate dining options and local activities\n\n
+
+
+# 🚀 **Reply by writing like below**:\n
+#   - I want to book a flight to London next week\n
+#   - Suggest me a hotel in Rome\n
+#   - Help me explore museums in Paris\n
+#   - Where to eat sushi in Athens\n
+#   - Show me what restaurants are nearby\n

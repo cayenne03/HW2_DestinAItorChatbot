@@ -15,6 +15,7 @@ from custom_models.spacy_nlp_md import nlp
 from custom_models.city_area_extractor_ner import CityAreaExtractor
 from utils.apis.openai_client_api import OpenAIClient
 from utils.apis.amadeus_api import AmadeusAPI
+from utils.apis.tripadvisor_api import TripAdvisorAPI
 from utils.date_utils import parse_date_to_iso
 
 
@@ -25,6 +26,7 @@ logger.debug("Actions module loaded")
 
 openai_client = OpenAIClient(api_key=os.getenv('OPENAI_API_KEY'))
 amadeus = AmadeusAPI(client_id=os.getenv('AMADEUS_API_KEY'), client_secret=os.getenv('AMADEUS_API_SECRET'))
+tripadvisor = TripAdvisorAPI()
 
 city_extractor = CityAreaExtractor()
 
@@ -548,6 +550,123 @@ class ActionSearchFlights(Action):
         except Exception as e:
             logger.error(f"Error in flight search: {e}")
             dispatcher.utter_message(text="❌ Sorry, I encountered an error while searching for flights.")
+            return []
+
+
+class ActionSearchHotels(Action):
+    def name(self) -> Text:
+        return "action_search_hotels"
+
+    def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]
+    ) -> List[Dict[Text, Any]]:
+
+        hotel_city = tracker.get_slot('hotel_city')
+
+        if not hotel_city:
+            logger.info("Missing required city information for hotel search")
+            dispatcher.utter_message(text="Sorry, I need a city to search for hotels.")
+            return []
+
+        try:
+            # get location ids
+            dispatcher.utter_message(text=f"🔍 Searching hotels using the term: <b>{hotel_city}</b> ...")
+            location_ids = tripadvisor.get_location_ids(query=hotel_city, category="hotels")
+
+            # log safely...
+            log_entries = []
+            for loc in location_ids:
+                log_entries.append(f"id: {loc['location_id']} | name: {loc['name']} | address: {loc['address_string']}")
+            logger.info(f"Location IDs: {' | '.join(log_entries)}")
+
+            # no hotels found
+            if not location_ids:
+                dispatcher.utter_message(text=f"❌ Sorry, I couldn't find any hotels using the above term. Try another one.")
+                return []
+
+            # get hotel details for each location (our limit is up to 3 anyways)
+            found_hotels = False
+
+            for loc_id in location_ids[:3]:
+                try:
+                    hotel_details = tripadvisor.get_location_details(location_id=loc_id['location_id'], category="hotels")
+
+                    if hotel_details:
+                        found_hotels = True
+
+                        # create hotel message with relevant information - ONE ITEM PER LINE
+                        hotel_info = f"🏨 <b>{hotel_details.get('name', 'Hotel')}</b>\n\n"
+
+                        # Address
+                        address_parts = []
+                        if hotel_details.get('street'):
+                            address_parts.append(hotel_details['street'])
+                        if hotel_details.get('city'):
+                            address_parts.append(hotel_details['city'])
+                        if hotel_details.get('country'):
+                            address_parts.append(hotel_details['country'])
+                        if hotel_details.get('postal_code'):
+                            address_parts.append(hotel_details['postal_code'])
+
+                        if address_parts:
+                            hotel_info += f"📍 {', '.join(address_parts)}\n"
+
+                        if hotel_details.get('rating'):
+                            reviews_text = f" ({hotel_details.get('num_reviews', '')} reviews)" if hotel_details.get('num_reviews') else ""
+                            hotel_info += f"⭐ {hotel_details['rating']}/5{reviews_text}\n"
+
+                        if hotel_details.get('ranking_string'):
+                            hotel_info += f"🏆 {hotel_details['ranking_string']}\n"
+
+                        if hotel_details.get('price_level'):
+                            price_level = hotel_details.get('price_level', '')
+                            # Count dollar signs and replace with same number of euro emojis
+                            euro_count = price_level.count('$')
+                            euro_symbols = '💲' * euro_count
+                            hotel_info += f"💰 {euro_symbols}\n"
+
+                        if hotel_details.get('subratings') and isinstance(hotel_details['subratings'], list):
+                            subratings_text = []
+                            for rating in hotel_details['subratings'][:4]:
+                                subratings_text.append(rating)
+
+                            hotel_info += f"📊 {' | '.join(subratings_text)}\n"
+
+                        if hotel_details.get('amenities'):
+                            amenities_list = []
+                            if isinstance(hotel_details['amenities'], str):
+                                amenities_list = hotel_details['amenities'].split(', ')
+                            elif isinstance(hotel_details['amenities'], list):
+                                amenities_list = hotel_details['amenities']
+
+                            if amenities_list:
+                                top_amenities = amenities_list[:5]
+                                hotel_info += f"✨ {', '.join(top_amenities)}\n"
+
+                        if hotel_details.get('google_maps_url'):
+                            hotel_info += f"🗺️ <a href='{hotel_details['google_maps_url']}'>View on Google Maps</a>"
+
+                        # dispatch the message and add separator
+                        dispatcher.utter_message(text=hotel_info)
+                        dispatcher.utter_message(text=f"{'_' * 40}")
+
+                except Exception as e:
+                    logger.error(f"Error getting details for hotel ID {loc_id['location_id']}: {e}")
+                    import traceback
+                    logger.debug(f"Detailed error: {traceback.format_exc()}")
+                    continue
+
+            if not found_hotels:
+                dispatcher.utter_message(text=f"❌ Sorry, I couldn't retrieve details for hotels in {hotel_city}.")
+
+            return []
+
+        except Exception as e:
+            logger.error(f"Error in hotel search: {e}")
+            dispatcher.utter_message(text=f"❌ Sorry, I encountered an error while searching for hotels in {hotel_city}.")
             return []
 
 

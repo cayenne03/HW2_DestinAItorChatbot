@@ -144,24 +144,24 @@ nlu:
     - the [third option](option)
     - let's go with activities
 
-- intent: around_me
-  examples: |
-    - show me what restaurants are nearby
-    - what's around me now
-    - find places near me
-    - nearby attractions please
-    - what can I find close by
-    - where's the nearest restaurant
-    - locate a nearby gas station
-    - show me things around my location
-    - what stores are near me
-    - are there coffee shops nearby
-    - find the closest pharmacy
-    - number four
-    - fourth option please
-    - I choose option 4
-    - [4 th](option)
-    - [four](option)
-    - [option 4](option)
-    - the [fourth option](option)
-    - let's go with around me
+# - intent: around_me
+#   examples: |
+#     - show me what restaurants are nearby
+#     - what's around me now
+#     - find places near me
+#     - nearby attractions please
+#     - what can I find close by
+#     - where's the nearest restaurant
+#     - locate a nearby gas station
+#     - show me things around my location
+#     - what stores are near me
+#     - are there coffee shops nearby
+#     - find the closest pharmacy
+#     - number four
+#     - fourth option please
+#     - I choose option 4
+#     - [4 th](option)
+#     - [four](option)
+#     - [option 4](option)
+#     - the [fourth option](option)
+#     - let's go with around me

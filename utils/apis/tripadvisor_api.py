@@ -1,7 +1,12 @@
 import os
 import requests
+import json
 from typing import Dict, List, Optional
 
+from mylogger import get_logger
+
+logger = get_logger(__name__)
+logger.debug("TripAdvisorAPI module loaded")
 
 class TripAdvisorAPI:
     def __init__(self, api_key: Optional[str] = None):
@@ -11,7 +16,65 @@ class TripAdvisorAPI:
             raise ValueError("TripAdvisor API key is required")
         
         self.base_url = "https://api.content.tripadvisor.com/api/v1"
-        self.headers = {"accept": "application/json"}
+        self.headers = {"Accept": "application/json"}
+        self.TA_CATEGORIES = set(["geos", "restaurants", "attractions", "hotels"])
+
+
+    def get_location_ids(self, query: str, category: str = None) -> List[Dict]:
+        """
+        Search for a location by query string and return up to 3 most relevant location results.
+
+        args:
+            query: the location to search for.
+            category: optional category to filter by (geos, restaurants, attractions, hotels).
+
+        returns: list of dictionaries containing location_id, name, and address_string for up to 3 results.
+        """
+        if not query:
+            raise ValueError("Search query cannot be empty")
+
+        url = f"{self.base_url}/location/search"
+        params = {
+            'searchQuery': query,
+            'language': 'en',
+            'key': self.api_key,
+            'radiusUnit': 'km',
+        }
+
+        if category and category in self.TA_CATEGORIES:
+            params['category'] = category
+
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+
+            if response.status_code != 200:
+                logger.error(f"Error: API returned status code {response.status_code}")
+                return []
+
+            location_data = response.json()
+
+            # check if results exist
+            if not location_data.get('data'):
+                return []
+
+            # get the top 3 most relevant results
+            top_results = location_data['data'][:3]
+
+            # extract only the needed fields
+            simplified_results = [
+                {
+                    "location_id": result.get("location_id"),
+                    "name": result.get("name"),
+                    "address_string": result.get("address_obj", {}).get("address_string")
+                }
+                for result in top_results
+            ]
+
+            return simplified_results
+
+        except requests.RequestException as e:
+            logger.error(f"Request error: {e}")
+            return []
 
 
     def get_location_details(self, location_id: str, category: str) -> Dict:
@@ -25,12 +88,12 @@ class TripAdvisorAPI:
         try:
             response = requests.get(url, headers=self.headers)
             if response.status_code != 200:
-                print(f"Error: API returned status code {response.status_code}")
+                logger.error(f"Error: API returned status code {response.status_code}")
                 return None
             
             data = response.json()
             
-            # Parse based on category
+            # parse based on category
             if category == "restaurants":
                 return self.parse_restaurant_details(data)
             elif category == "attractions":
@@ -41,7 +104,7 @@ class TripAdvisorAPI:
                 return self.parse_geos_details(data)
                 
         except Exception as e:
-            print(f"Error fetching location details: {e}")
+            logger.error(f"Error fetching location details: {e}")
             return None
 
 
@@ -56,13 +119,13 @@ class TripAdvisorAPI:
         try:
             response = requests.get(url, headers=self.headers)
             if response.status_code != 200:
-                print(f"Error: API returned status code {response.status_code}")
+                logger.error(f"Error: API returned status code {response.status_code}")
                 return None
             
             return response.json()
             
         except Exception as e:
-            print(f"Error fetching photos: {e}")
+            logger.error(f"Error fetching photos: {e}")
             return None
 
 
