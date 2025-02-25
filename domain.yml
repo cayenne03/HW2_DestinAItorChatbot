@@ -15,6 +15,7 @@ entities:
   - city
   - date
   - number
+  - kind_of_activity
 
 slots:
   departure_city:
@@ -88,6 +89,27 @@ slots:
       - active_loop: hotel_searching_form
         requested_slot: hotel_city
 
+  explore_city:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: city
+    - type: from_text
+      conditions:
+      - active_loop: explore_activities_places_form
+        requested_slot: explore_city
+
+  food_or_not:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: kind_of_activity
+    - type: from_text
+      conditions:
+      - active_loop: explore_activities_places_form
+        requested_slot: food_or_not
 
 forms:
   flight_searching_form:
@@ -102,6 +124,10 @@ forms:
     required_slots:
       - hotel_city
 
+  explore_activities_places_form:
+    required_slots:
+      - explore_city
+      - food_or_not
 
 responses:
   utter_welcome_menu:
@@ -146,12 +172,12 @@ responses:
   utter_goodbye:
   - text: "Thanks for chatting! 🌴 Safe travels and remember, I'm here whenever you need travel & planning help or real-time recommendations! 🗺️ \n\nHave a great journey and enjoy! 🍹🍽️⛱️"
 
-  utter_activities:
-  - text: "ACTIVITIES"
 
   # utter_around_me:
   # - text: "AROUND ME (🚧 👷 **UNDER CONSTRUCTION** 🏗️ 🛠️)"
 
+
+  ## FLIGHT SEARCHING ##
 
   utter_ask_departure_city:
     - text: "From which city would you like to depart?"
@@ -178,11 +204,23 @@ responses:
   #   - text: "You can continue prompting me to explore flights, hotels and activities in {arrival_city} or any other city."
 
   ##### HOTEL SEARCHING #####
+
   utter_ask_hotel_city:
     - text: "Which city would you like to search hotels for? You can also use broader city areas."
 
   utter_submit_hotel_search:
     - text: "Great! Let me search for hotels in your selected area!"
+
+  ##### EXPLORE ACTIVITIES & PLACES #####
+
+  utter_ask_explore_city:
+    - text: "Which city would you like to explore for activities, restaurants, and places?"
+
+  utter_ask_food_or_not:
+    - text: "Describe shortly what kind of activities are you looking for? (food, restaurants, museums, places, attractions, tours, etc.)"
+
+  utter_submit_explore_search:
+    - text: "Great! Let me search for activities, restaurants, and places in your selected city!"
 
 
 actions:
@@ -201,6 +239,10 @@ actions:
   - action_extract_hotel_entities
   # - validate_hotel_searching_form
   - action_search_hotels
+
+  - action_extract_explore_entities
+  # - validate_explore_activities_places_form
+  - action_search_activities_places
 
 session_config:
   session_expiration_time: 60

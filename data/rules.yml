@@ -91,3 +91,36 @@ rules:
   steps:
     - action: hotel_searching_form
     - active_loop: hotel_searching_form
+
+
+##### EXPLORE ACTIVITIES & PLACES #####
+
+- rule: Activate explore activities places form
+  steps:
+    - intent: explore_activities_places
+    - action: action_validate_intent
+    - action: action_extract_explore_entities
+    - action: explore_activities_places_form
+    - active_loop: explore_activities_places_form
+
+
+- rule: Submit explore activities places form
+  condition:
+    - active_loop: explore_activities_places_form
+  steps:
+    - action: explore_activities_places_form
+    - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
+    - action: utter_submit_explore_search
+    - action: action_search_activities_places
+    - action: action_continue_prompt_search
+    - action: action_listen
+
+
+- rule: Handle form input during explore activities places
+  condition:
+    - active_loop: explore_activities_places_form
+  steps:
+    - action: explore_activities_places_form
+    - active_loop: explore_activities_places_form

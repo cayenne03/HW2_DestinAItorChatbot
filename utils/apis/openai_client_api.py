@@ -62,6 +62,21 @@ Required format:
 }}'''
 
 
+    @staticmethod
+    def create_food_detection_prompt(request: str) -> str:
+        return f'''
+This is a sentence from a user: {request}.
+Please determine if it is about food, restaurant or any place with gastronomic interest.
+
+Rules:
+- If yes answer with 'restaurants', otherwise 'attractions'.
+- Return JSON only, no other text.
+
+Required format:
+{{
+  "food_or_not": "restaurants" or "attractions"
+}}'''
+
     def get_completion(self, prompt: str, model: str = "gpt-4") -> Dict:
         """Get completion from OpenAI API with retry logic and JSON parsing."""
         max_retries = 3

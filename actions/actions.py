@@ -416,6 +416,104 @@ class ActionExtractHotelEntities(Action):
         return events
 
 
+class ActionExtractExploreEntities(Action):
+    def name(self) -> Text:
+        return "action_extract_explore_entities"
+
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        active_loop = tracker.active_loop.get('name')
+        if active_loop:
+            logger.debug(f"Skipping entity extraction - active form: {active_loop}")
+            return []
+
+        latest_message = tracker.latest_message.get('text')
+        events = []
+        forms = domain.get('forms', {})
+        required_slots = forms.get('explore_activities_places_form', {}).get('required_slots', [])
+        logger.info(f"Required slots: {required_slots}")
+
+        # reset all slots at the start
+        for slot in required_slots:
+            events.append(SlotSet(slot, None))
+
+        # TODO: Remove this logic to a separate common method/function as it's the same with ActionExtractHotelEntities above^^^
+        try:
+            # 1. extract city using the transformer-based NER (better for city names)
+            transformer_city = city_extractor.extract_city(latest_message)
+            logger.info(f"Transformer city: {transformer_city}")
+            # 2. process with spaCy to find organizations and facilities
+            doc = nlp(latest_message)
+
+            # get the first ORG/FAC
+            first_org_fac = next((ent.text for ent in doc.ents if ent.label_ in ["ORG", "FAC"]), None)
+            logger.info(f"First ORG/FAC: {first_org_fac}")
+
+            # get the first GPE/LOC (if transformer didn't find a city)
+            first_gpe_loc = None
+            if not transformer_city:
+                first_gpe_loc = next((ent.text for ent in doc.ents if ent.label_ in ["GPE", "LOC"]), None)
+                logger.info(f"First GPE/LOC: {first_gpe_loc}")
+
+            # construct explore_city_text based on available information
+            explore_city_text = None
+
+            if transformer_city and first_org_fac:
+                # if we have both city from transformer and facility from spaCy
+                explore_city_text = f"in {transformer_city} around {first_org_fac}"
+                logger.info(f"1. Explore city text: {explore_city_text}")
+            elif first_gpe_loc and first_org_fac:
+                # if we have both location from spaCy and organization/facility
+                explore_city_text = f"in {first_gpe_loc} around {first_org_fac}"
+                logger.info(f"2. Explore city text: {explore_city_text}")
+            elif transformer_city:
+                # if we only have city from transformer
+                explore_city_text = transformer_city
+                logger.info(f"3. Explore city text: {explore_city_text}")
+            elif first_gpe_loc:
+                # if we only have location from spaCy
+                explore_city_text = first_gpe_loc
+                logger.info(f"4. Explore city text: {explore_city_text}")
+            elif first_org_fac:
+                # if we only have organization/facility
+                explore_city_text = f"around {first_org_fac}"
+                logger.info(f"5. Explore city text: {explore_city_text}")
+
+            # only set the slot if we actually found an entity
+            if "explore_city" in required_slots and explore_city_text is not None:
+                logger.info(f"Setting slot explore_city = {explore_city_text}")
+                events.append(SlotSet("explore_city", explore_city_text))
+
+            food_or_not_text = None
+            prompt = openai_client.create_food_detection_prompt(latest_message)
+            food_or_not_text = openai_client.get_completion(prompt).get("food_or_not")
+            logger.info(f"Food or not text: {food_or_not_text}")
+
+            if "food_or_not" in required_slots and food_or_not_text is not None:
+                logger.info(f"Setting slot food_or_not = {food_or_not_text}")
+                events.append(SlotSet("food_or_not", food_or_not_text.lower()))
+
+        except Exception as e:
+            logger.error(f"Error in entity extraction: {e}")
+            # if extraction fails, just return events with reset slots
+            return events
+
+        # check which required slots are still missing
+        # this determines if we need to activate the form for user input
+        missing_slots = [slot for slot in required_slots
+                        if tracker.get_slot(slot) is None]
+        logger.info(f"Missing slots: {missing_slots}")
+
+        # if there are missing required slots, activate the form to collect them from the user
+        if missing_slots:
+            logger.info("Activating form to collect missing slots")
+            events.append(FollowupAction("explore_activities_places_form"))
+
+        return events
+
+
 class ActionContinuePromptSearch(Action):
     def name(self) -> Text:
         return "action_continue_prompt_search"
@@ -597,10 +695,9 @@ class ActionSearchHotels(Action):
                     if hotel_details:
                         found_hotels = True
 
-                        # create hotel message with relevant information - ONE ITEM PER LINE
+                        # create hotel message with relevant information
                         hotel_info = f"🏨 <b>{hotel_details.get('name', 'Hotel')}</b>\n\n"
 
-                        # Address
                         address_parts = []
                         if hotel_details.get('street'):
                             address_parts.append(hotel_details['street'])
@@ -623,7 +720,7 @@ class ActionSearchHotels(Action):
 
                         if hotel_details.get('price_level'):
                             price_level = hotel_details.get('price_level', '')
-                            # Count dollar signs and replace with same number of euro emojis
+                            # count dollar signs and replace with same number of emojis
                             euro_count = price_level.count('$')
                             euro_symbols = '💲' * euro_count
                             hotel_info += f"💰 {euro_symbols}\n"
@@ -667,6 +764,202 @@ class ActionSearchHotels(Action):
         except Exception as e:
             logger.error(f"Error in hotel search: {e}")
             dispatcher.utter_message(text=f"❌ Sorry, I encountered an error while searching for hotels in {hotel_city}.")
+            return []
+
+
+class ActionSearchActivitiesPlaces(Action):
+    def name(self) -> Text:
+        return "action_search_activities_places"
+
+
+    def format_restaurant_details(self, restaurant_details):
+        restaurant_info = f"🍽️ <b>{restaurant_details.get('name', 'Restaurant')}</b>\n\n"
+        address_parts = []
+        if restaurant_details.get('street'):
+            address_parts.append(restaurant_details['street'])
+        if restaurant_details.get('city'):
+            address_parts.append(restaurant_details['city'])
+        if restaurant_details.get('state'):
+            address_parts.append(restaurant_details['state'])
+        if restaurant_details.get('country'):
+            address_parts.append(restaurant_details['country'])
+        if restaurant_details.get('postal_code'):
+            address_parts.append(restaurant_details['postal_code'])
+
+        if address_parts:
+            restaurant_info += f"📍 {', '.join(address_parts)}\n"
+
+        if restaurant_details.get('rating'):
+            reviews_text = f" ({restaurant_details.get('num_reviews', '')} reviews)" if restaurant_details.get('num_reviews') else ""
+            restaurant_info += f"⭐ {restaurant_details['rating']}/5{reviews_text}\n"
+
+        if restaurant_details.get('ranking_string'):
+            restaurant_info += f"🏆 {restaurant_details['ranking_string']}\n"
+
+        if restaurant_details.get('price_level'):
+            price_level = restaurant_details.get('price_level', '')
+            # count dollar signs and replace with same number of emojis
+            euro_count = price_level.count('$')
+            euro_symbols = '💲' * euro_count
+            restaurant_info += f"💰 {euro_symbols}\n"
+
+        if restaurant_details.get('subratings') and isinstance(restaurant_details['subratings'], list):
+            subratings_text = []
+            for rating in restaurant_details['subratings'][:4]:
+                subratings_text.append(rating)
+
+            restaurant_info += f"📊 {' | '.join(subratings_text)}\n"
+
+        if restaurant_details.get('cuisine'):
+            restaurant_info += f"🍳 {restaurant_details['cuisine']}\n"
+
+        if restaurant_details.get('features'):
+            features_list = []
+            if isinstance(restaurant_details['features'], str):
+                features_list = restaurant_details['features'].split(' | ')
+            elif isinstance(restaurant_details['features'], list):
+                features_list = restaurant_details['features']
+
+            if features_list:
+                top_features = features_list[:5]
+                restaurant_info += f"✨ {', '.join(top_features)}\n"
+
+        if restaurant_details.get('business_hours'):
+            restaurant_info += f"🕒 {restaurant_details['business_hours']}\n"
+
+        if restaurant_details.get('website'):
+            restaurant_info += f"🌐 <a href='{restaurant_details['website']}'>Visit Website</a>\n"
+
+        if restaurant_details.get('phone'):
+            restaurant_info += f"📞 {restaurant_details['phone']}\n"
+
+        if restaurant_details.get('google_maps_url'):
+            restaurant_info += f"🗺️ <a href='{restaurant_details['google_maps_url']}'>View on Google Maps</a>"
+
+        return restaurant_info
+
+
+    def format_attraction_details(self, attraction_details):
+        attraction_info = f"🏛️ <b>{attraction_details.get('name', 'Attraction')}</b>\n\n"
+
+        # description (only first 200 chars to keep it short)
+        if attraction_details.get('description'):
+            description = attraction_details['description']
+            if len(description) > 200:
+                short_desc = description[:200].rsplit(' ', 1)[0] + '...'
+            else:
+                short_desc = description
+            attraction_info += f"{short_desc}\n\n"
+
+        address_parts = []
+        if attraction_details.get('street'):
+            address_parts.append(attraction_details['street'])
+        if attraction_details.get('city'):
+            address_parts.append(attraction_details['city'])
+        if attraction_details.get('country'):
+            address_parts.append(attraction_details['country'])
+        if attraction_details.get('postal_code'):
+            address_parts.append(attraction_details['postal_code'])
+
+        if address_parts:
+            attraction_info += f"📍 {', '.join(address_parts)}\n"
+
+        if attraction_details.get('rating'):
+            reviews_text = f" ({attraction_details.get('num_reviews', '')} reviews)" if attraction_details.get('num_reviews') else ""
+            attraction_info += f"⭐ {attraction_details['rating']}/5{reviews_text}\n"
+
+        if attraction_details.get('ranking_string'):
+            attraction_info += f"🏆 {attraction_details['ranking_string']}\n"
+
+        if attraction_details.get('attraction_types'):
+            attraction_info += f"🏷️ {attraction_details['attraction_types']}\n"
+
+        if attraction_details.get('business_hours'):
+            attraction_info += f"🕒 {attraction_details['business_hours']}\n"
+
+        if attraction_details.get('website'):
+            attraction_info += f"🌐 <a href='{attraction_details['website']}'>Visit Website</a>\n"
+
+        if attraction_details.get('phone'):
+            attraction_info += f"📞 {attraction_details['phone']}\n"
+
+        if attraction_details.get('google_maps_url'):
+            attraction_info += f"🗺️ <a href='{attraction_details['google_maps_url']}'>View on Google Maps</a>"
+
+        return attraction_info
+
+
+    def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]
+    ) -> List[Dict[Text, Any]]:
+
+        explore_city = tracker.get_slot('explore_city')
+        food_or_not = tracker.get_slot('food_or_not')
+
+        if not all([explore_city, food_or_not]):
+            logger.info("Missing required information for explore activities search")
+            dispatcher.utter_message(text="Sorry, I need all details to search for activities/places.")
+            return []
+
+        try:
+            # determine the correct category for TripAdvisor API
+            category = "restaurants" if food_or_not == "restaurants" else "attractions"
+
+            dispatcher.utter_message(text=f"🔍 Searching for {category} in {explore_city}...")
+            location_ids = tripadvisor.get_location_ids(query=explore_city, category=category)
+
+            # log safely
+            log_entries = []
+            for loc in location_ids:
+                log_entries.append(f"id: {loc['location_id']} | name: {loc['name']} | address: {loc['address_string']}")
+            logger.info(f"Location IDs: {' | '.join(log_entries)}")
+
+            # no places found
+            if not location_ids:
+                dispatcher.utter_message(text=f"❌ Sorry, I couldn't find any {category} in {explore_city}.")
+                return []
+
+            found_places = False
+
+            for loc_id in location_ids[:3]:
+                try:
+                    place_details = tripadvisor.get_location_details(
+                        location_id=loc_id['location_id'],
+                        category=category
+                    )
+
+                    if place_details:
+                        found_places = True
+
+                        # format the details based on the category
+                        if category == "restaurants":
+                            place_info = self.format_restaurant_details(place_details)
+                        else:  # attractions
+                            place_info = self.format_attraction_details(place_details)
+
+                        # and send the formatted message to the user
+                        dispatcher.utter_message(text=place_info)
+
+                        # adding a separator between entries
+                        dispatcher.utter_message(text=f"{'_' * 40}")
+
+                except Exception as e:
+                    logger.error(f"Error getting details for {category} ID {loc_id['location_id']}: {e}")
+                    import traceback
+                    logger.debug(f"Detailed error: {traceback.format_exc()}")
+                    continue
+
+            if not found_places:
+                dispatcher.utter_message(text=f"❌ Sorry, I couldn't retrieve details for {category} in {explore_city}.")
+
+            return []
+
+        except Exception as e:
+            logger.error(f"Error in {food_or_not} search: {e}")
+            dispatcher.utter_message(text=f"❌ Sorry, I encountered an error while searching for {food_or_not} in {explore_city}.")
             return []
 
 
